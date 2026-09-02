@@ -1,0 +1,77 @@
+"use client";
+import Badge from "@/compoent/ui/Badge";
+import Table from "@/compoent/ui/Table";
+import { useGetTrialBalanceQuery } from "@/redux/features/ledger/ledgerApi";
+import { useSocketEvent } from "@/socket/useSocketEvent";
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+
+
+const COLUMNS = [
+  { key: "code", label: "Code" },
+  { key: "name", label: "Account" },
+  { key: "type", label: "Type" },
+  { key: "debit", label: "Debit" },
+  { key: "credit", label: "Credit" },
+];
+
+const TrialBalancePage = () => {
+  const { data, isLoading, refetch } = useGetTrialBalanceQuery();
+
+  useSocketEvent("company-data-updated", (payload) => {
+    if (payload.module === "Journal") refetch();
+  });
+
+  const report = data?.data;
+
+  return (
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-neutral-900">Trial Balance</h1>
+        {report && (
+          <Badge variant={report.isBalanced ? "success" : "danger"}>
+            {report.isBalanced ? (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Balanced
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="h-3.5 w-3.5" /> Not Balanced
+              </span>
+            )}
+          </Badge>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+        </div>
+      ) : (
+        <Table columns={COLUMNS}>
+          {report?.rows?.map((row) => (
+            <tr key={row.accountId} className="hover:bg-neutral-50">
+              <td className="px-4 py-3 text-neutral-500">{row.code}</td>
+              <td className="px-4 py-3 text-neutral-800">{row.name}</td>
+              <td className="px-4 py-3 text-neutral-500">{row.type}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-neutral-700">
+                {row.debit > 0 ? `৳ ${row.debit.toFixed(2)}` : "—"}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums text-neutral-700">
+                {row.credit > 0 ? `৳ ${row.credit.toFixed(2)}` : "—"}
+              </td>
+            </tr>
+          ))}
+          <tr className="bg-neutral-50 font-semibold">
+            <td className="px-4 py-3" colSpan={3}>
+              Total
+            </td>
+            <td className="px-4 py-3 text-right tabular-nums">৳ {report?.totalDebit?.toFixed(2)}</td>
+            <td className="px-4 py-3 text-right tabular-nums">৳ {report?.totalCredit?.toFixed(2)}</td>
+          </tr>
+        </Table>
+      )}
+    </div>
+  );
+};
+
+export default TrialBalancePage;

@@ -1,0 +1,19 @@
+import { apiSlice } from "@/redux/api/apiSlice";
+import { GET_ACCOUNT_LEDGER, GET_TRIAL_BALANCE } from "@/utils/url";
+
+
+export const ledgerApi = apiSlice.injectEndpoints({
+  overrideExisting: true,
+  endpoints: (builder) => ({
+    getAccountLedger: builder.query({
+      query: ({ accountId, ...params }) => ({ url: GET_ACCOUNT_LEDGER(accountId), method: "GET", params }),
+      providesTags: ["Ledger"],
+    }),
+    getTrialBalance: builder.query({
+      query: () => ({ url: GET_TRIAL_BALANCE, method: "GET" }),
+      providesTags: ["Ledger"],
+    }),
+  }),
+});
+
+export const { useGetAccountLedgerQuery, useGetTrialBalanceQuery } = ledgerApi;
