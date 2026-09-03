@@ -10,15 +10,15 @@ import {
 } from "@/redux/features/vendor/vendorApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import Button from "@/compoent/ui/Button";
-import EmptyState from "@/compoent/ui/EmptyState";
+import Input from "@/compoent/ui/Input";
+import Modal from "@/compoent/ui/Modal";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
-import Pagination from "@/compoent/ui/Pagination";
-import Modal from "@/compoent/ui/Modal";
-import Input from "@/compoent/ui/Input";
-import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
-import SearchInput from "@/compoent/ui/SearchInput";
 import Avatar from "@/compoent/ui/Avatar";
+import Pagination from "@/compoent/ui/Pagination";
+import EmptyState from "@/compoent/ui/EmptyState";
+import SearchInput from "@/compoent/ui/SearchInput";
+import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
 
 const COLUMNS = [
   { key: "name", label: "Name" },
@@ -129,10 +129,10 @@ const VendorPage = () => {
   };
 
   const handleDelete = async () => {
-    const targetName = deleteTarget?.name;
+    const name = deleteTarget?.name;
     try {
       await deleteVendor(deleteTarget._id).unwrap();
-      toast.success(`"${targetName}" deleted successfully`);
+      toast.success(`"${name}" deleted successfully`);
       setDeleteTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to delete vendor");
@@ -143,10 +143,10 @@ const VendorPage = () => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">Vendors</h1>
-          <p className="mt-0.5 text-sm text-neutral-500">Manage your suppliers (Creditors)</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Vendors</h1>
+          <p className="mt-0.5 text-sm text-slate-600">Manage your suppliers (Creditors)</p>
         </div>
-        <Button type="button" onClick={openCreateModal}>
+        <Button onClick={openCreateModal}>
           <Plus className="h-4 w-4" />
           Add Vendor
         </Button>
@@ -173,16 +173,16 @@ const VendorPage = () => {
         <>
           <Table columns={COLUMNS}>
             {vendors.map((v) => (
-              <tr key={v._id} className="group hover:bg-neutral-50/70">
+              <tr key={v._id} className="group hover:bg-slate-50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Avatar name={v.name} />
-                    <span className="font-medium text-neutral-900">{v.name}</span>
+                    <span className="font-semibold text-slate-900">{v.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-neutral-600">{v.phone || "—"}</td>
-                <td className="px-4 py-3 text-neutral-600">{v.tinNumber || "—"}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-900">
+                <td className="px-4 py-3 text-slate-700">{v.phone || "—"}</td>
+                <td className="px-4 py-3 text-slate-700">{v.tinNumber || "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                   ৳ {Number(v.currentBalance).toFixed(2)}
                 </td>
                 <td className="px-4 py-3">
@@ -190,10 +190,10 @@ const VendorPage = () => {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button type="button" size="sm" variant="ghost" onClick={() => openEditModal(v)}>
+                    <Button size="sm" variant="ghost" onClick={() => openEditModal(v)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(v)}>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(v)}>
                       <Trash2 className="h-3.5 w-3.5 text-rose-500" />
                     </Button>
                   </div>
@@ -208,7 +208,7 @@ const VendorPage = () => {
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingVendor ? "Edit Vendor" : "Add Vendor"} size="lg">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input id="name" name="name" label="Name" placeholder="e.g. Trans Global Supplier" value={formData.name} onChange={handleChange} error={errors.name} />
+            <Input id="name" name="name" label="Name" required placeholder="e.g. Trans Global Supplier" value={formData.name} onChange={handleChange} error={errors.name} />
             <Input id="phone" name="phone" label="Phone" placeholder="+60 1X-XXX XXXX" value={formData.phone} onChange={handleChange} />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -218,7 +218,7 @@ const VendorPage = () => {
           <Input id="address" name="address" label="Address" placeholder="Optional" value={formData.address} onChange={handleChange} />
 
           <div>
-            <p className="mb-3 text-sm font-semibold text-neutral-800">Bank Information</p>
+            <p className="mb-3 text-sm font-bold text-slate-800">Bank Information</p>
             <div className="grid grid-cols-3 gap-4">
               <Input id="bankName" name="bankName" label="Bank Name" value={formData.bankName} onChange={handleChange} />
               <Input id="accountNumber" name="accountNumber" label="Account No." value={formData.accountNumber} onChange={handleChange} />
@@ -238,7 +238,7 @@ const VendorPage = () => {
             />
           )}
 
-          <div className="mt-1 flex justify-end gap-2.5 border-t border-neutral-100 pt-4">
+          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel
             </Button>

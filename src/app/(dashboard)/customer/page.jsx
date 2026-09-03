@@ -10,15 +10,15 @@ import {
 } from "@/redux/features/customer/customerApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import Button from "@/compoent/ui/Button";
-import EmptyState from "@/compoent/ui/EmptyState";
+import Input from "@/compoent/ui/Input";
+import Modal from "@/compoent/ui/Modal";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
-import Pagination from "@/compoent/ui/Pagination";
-import Modal from "@/compoent/ui/Modal";
-import Input from "@/compoent/ui/Input";
-import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
-import SearchInput from "@/compoent/ui/SearchInput";
 import Avatar from "@/compoent/ui/Avatar";
+import Pagination from "@/compoent/ui/Pagination";
+import EmptyState from "@/compoent/ui/EmptyState";
+import SearchInput from "@/compoent/ui/SearchInput";
+import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
 
 const COLUMNS = [
   { key: "name", label: "Name" },
@@ -109,10 +109,10 @@ const CustomerPage = () => {
   };
 
   const handleDelete = async () => {
-    const targetName = deleteTarget?.name;
+    const name = deleteTarget?.name;
     try {
       await deleteCustomer(deleteTarget._id).unwrap();
-      toast.success(`"${targetName}" deleted successfully`);
+      toast.success(`"${name}" deleted successfully`);
       setDeleteTarget(null);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to delete customer");
@@ -120,87 +120,79 @@ const CustomerPage = () => {
   };
 
   return (
-    // ✅ Fix — পুরো Return এখন একটা Fragment দিয়ে Wrap করা, Modal/ConfirmDialog 
-    // এখন <div className="p-6"> এর বাইরে, Page Component এর একদম Top Level এ
-    <>
-      <div className="p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">Customers</h1>
-            <p className="mt-0.5 text-sm text-neutral-500">Manage your customers (Debtors)</p>
-          </div>
-          <Button type="button" onClick={openCreateModal}>
-            <Plus className="h-4 w-4" />
-            Add Customer
-          </Button>
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Customers</h1>
+          <p className="mt-0.5 text-sm text-slate-600">Manage your customers (Debtors)</p>
         </div>
-
-        <div className="mb-4">
-          <SearchInput
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Search by name or phone..."
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex h-48 items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-          </div>
-        ) : customers.length === 0 ? (
-          <EmptyState title="No customers yet" description="Add your first customer to get started" />
-        ) : (
-          <>
-            <Table columns={COLUMNS}>
-              {customers.map((c) => (
-                <tr key={c._id} className="group hover:bg-neutral-50/70">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={c.name} />
-                      <span className="font-medium text-neutral-900">{c.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">{c.phone || "—"}</td>
-                  <td className="px-4 py-3 text-neutral-600">{c.email || "—"}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-900">
-                    ৳ {Number(c.currentBalance).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge variant={c.status === "active" ? "success" : "neutral"}>{c.status}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Button type="button" size="sm" variant="ghost" onClick={() => openEditModal(c)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setDeleteTarget(c)}>
-                        <Trash2 className="h-3.5 w-3.5 text-rose-500" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </Table>
-            <Pagination pagination={pagination} onPageChange={setPage} />
-          </>
-        )}
+        <Button onClick={openCreateModal}>
+          <Plus className="h-4 w-4" />
+          Add Customer
+        </Button>
       </div>
 
-      {/* ✅ এখন এখানে, বাইরে */}
+      <div className="mb-4">
+        <SearchInput
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+          placeholder="Search by name or phone..."
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="flex h-48 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+        </div>
+      ) : customers.length === 0 ? (
+        <EmptyState title="No customers yet" description="Add your first customer to get started" />
+      ) : (
+        <>
+          <Table columns={COLUMNS}>
+            {customers.map((c) => (
+              <tr key={c._id} className="group hover:bg-slate-50">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={c.name} />
+                    <span className="font-semibold text-slate-900">{c.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-slate-700">{c.phone || "—"}</td>
+                <td className="px-4 py-3 text-slate-700">{c.email || "—"}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-black">
+                  ৳ {Number(c.currentBalance).toFixed(2)}
+                </td>
+                <td className="px-4 py-3">
+                  <Badge variant={c.status === "active" ? "success" : "neutral"}>{c.status}</Badge>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button size="sm" variant="ghost" onClick={() => openEditModal(c)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(c)}>
+                      <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+          <Pagination pagination={pagination} onPageChange={setPage} />
+        </>
+      )}
+
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingCustomer ? "Edit Customer" : "Add Customer"}>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input id="name" name="name" label="Full Name" placeholder="e.g. Kirby Koch" value={formData.name} onChange={handleChange} error={errors.name} />
-
+          <Input id="name" name="name" label="Full Name" required placeholder="e.g. Kirby Koch" value={formData.name} onChange={handleChange} error={errors.name} />
           <div className="grid grid-cols-2 gap-4">
             <Input id="phone" name="phone" label="Phone" placeholder="+60 1X-XXX XXXX" value={formData.phone} onChange={handleChange} />
             <Input id="email" name="email" type="email" label="Email" placeholder="name@example.com" value={formData.email} onChange={handleChange} />
           </div>
-
           <Input id="address" name="address" label="Address" placeholder="Optional" value={formData.address} onChange={handleChange} />
-
           {!editingCustomer && (
             <Input
               id="openingBalance"
@@ -212,8 +204,7 @@ const CustomerPage = () => {
               onChange={handleChange}
             />
           )}
-
-          <div className="mt-1 flex justify-end gap-2.5 border-t border-neutral-100 pt-4">
+          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
             <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel
             </Button>
@@ -232,7 +223,7 @@ const CustomerPage = () => {
         title="Delete Customer"
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
       />
-    </>
+    </div>
   );
 };
 

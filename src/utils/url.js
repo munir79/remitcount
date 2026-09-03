@@ -83,3 +83,14 @@ export const GET_ALL_BANK_ACCOUNTS = `${API}/bank-account/get-all-bank-accounts`
 export const GET_SINGLE_BANK_ACCOUNT = (id) => `${API}/bank-account/get-single-bank-account/${id}`;
 export const UPDATE_BANK_ACCOUNT = (id) => `${API}/bank-account/update-bank-account/${id}`;
 export const DELETE_BANK_ACCOUNT = (id) => `${API}/bank-account/delete-bank-account/${id}`;
+
+
+// ===== POS — Dashboard =====
+export const GET_POS_DASHBOARD_SUMMARY = `${API}/report/dashboard-summary`;
+
+// ===== POS — Cashier Session =====
+export const OPEN_CASHIER_SESSION = `${API}/pos/cashier-session/open-session`;
+export const CLOSE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/close-session/${id}`;
+export const GET_ALL_CASHIER_SESSIONS = `${API}/pos/cashier-session/get-all-sessions`;
+export const GET_MY_OPEN_SESSION = `${API}/pos/cashier-session/get-my-open-session`;
+export const GET_SINGLE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/get-single-session/${id}`;

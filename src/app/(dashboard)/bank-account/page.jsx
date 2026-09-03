@@ -4,20 +4,20 @@ import { toast } from "sonner";
 import { Plus, Loader2, Landmark } from "lucide-react";
 import { useCreateBankAccountMutation, useGetAllBankAccountsQuery } from "@/redux/features/bankAccount/bankAccountApi";
 import { useGetAllAccountsQuery } from "@/redux/features/account/accountApi";
-import Button from "@/compoent/ui/Button";
 import EmptyState from "@/compoent/ui/EmptyState";
+import Badge from "@/compoent/ui/Badge";
+import Button from "@/compoent/ui/Button";
 import Table from "@/compoent/ui/Table";
+import { useSocketEvent } from "@/socket/useSocketEvent";
 import Modal from "@/compoent/ui/Modal";
 import Select from "@/compoent/ui/Select";
 import Input from "@/compoent/ui/Input";
-import { useSocketEvent } from "@/socket/useSocketEvent";
-import Badge from "@/compoent/ui/Badge";
 
 
 const COLUMNS = [
   { key: "name", label: "Account" },
   { key: "type", label: "Type" },
-  { key: "bank", label: "Bank Details" },
+  { key: "details", label: "Details" },
   { key: "balance", label: "Balance" },
   { key: "status", label: "Status" },
 ];
@@ -42,12 +42,18 @@ const BankAccountPage = () => {
   const assetAccounts = accountData?.data?.data || [];
 
   useSocketEvent("company-data-updated", (payload) => {
-    if (payload.module === "BankAccount") refetch();
+    if (payload?.module === "BankAccount") refetch();
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setFormData(initialFormState);
+    setErrors({});
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -66,13 +72,9 @@ const BankAccountPage = () => {
     }
 
     try {
-      await createBankAccount({
-        ...formData,
-        clientRequestId: crypto.randomUUID(),
-      }).unwrap();
+      await createBankAccount({ ...formData, clientRequestId: crypto.randomUUID() }).unwrap();
       toast.success("Bank/Cash account created successfully");
-      setIsModalOpen(false);
-      setFormData(initialFormState);
+      closeModal();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to create account");
     }
@@ -82,8 +84,8 @@ const BankAccountPage = () => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Bank Accounts</h1>
-          <p className="text-sm text-neutral-500">Cash drawers and bank accounts</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Bank Accounts</h1>
+          <p className="mt-0.5 text-sm text-slate-600">Cash drawers and bank accounts</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -100,15 +102,15 @@ const BankAccountPage = () => {
       ) : (
         <Table columns={COLUMNS}>
           {bankAccounts.map((ba) => (
-            <tr key={ba._id} className="hover:bg-neutral-50">
-              <td className="px-4 py-3 font-medium text-neutral-900">{ba.account?.name}</td>
+            <tr key={ba._id} className="hover:bg-slate-50">
+              <td className="px-4 py-3 font-semibold text-slate-900">{ba.account?.name}</td>
               <td className="px-4 py-3">
                 <Badge variant={ba.accountType === "Cash" ? "warning" : "primary"}>{ba.accountType}</Badge>
               </td>
-              <td className="px-4 py-3 text-neutral-600">
+              <td className="px-4 py-3 text-slate-700">
                 {ba.accountType === "Bank" ? `${ba.bankName || "—"} — ${ba.bankAccountNumber || "—"}` : ba.location || "—"}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums font-medium text-neutral-900">
+              <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
                 ৳ {Number(ba.account?.currentBalance || 0).toFixed(2)}
               </td>
               <td className="px-4 py-3">
@@ -119,9 +121,9 @@ const BankAccountPage = () => {
         </Table>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Bank/Cash Account">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title="Add Bank/Cash Account">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Select id="account" name="account" label="Chart of Accounts" value={formData.account} onChange={handleChange} error={errors.account}>
+          <Select id="account" name="account" label="Chart of Accounts" required value={formData.account} onChange={handleChange} error={errors.account}>
             <option value="">Select an Asset account</option>
             {assetAccounts.map((a) => (
               <option key={a._id} value={a._id}>
@@ -137,29 +139,29 @@ const BankAccountPage = () => {
 
           {formData.accountType === "Bank" ? (
             <>
-              <Input id="bankName" name="bankName" label="Bank Name" value={formData.bankName} onChange={handleChange} error={errors.bankName} />
+              <Input id="bankName" name="bankName" label="Bank Name" required value={formData.bankName} onChange={handleChange} error={errors.bankName} />
               <div className="grid grid-cols-2 gap-4">
                 <Input id="bankAccountNumber" name="bankAccountNumber" label="Account Number" value={formData.bankAccountNumber} onChange={handleChange} />
                 <Input id="bankBranchName" name="bankBranchName" label="Branch" value={formData.bankBranchName} onChange={handleChange} />
               </div>
               <Input id="accountHolderName" name="accountHolderName" label="Account Holder Name" value={formData.accountHolderName} onChange={handleChange} />
-              <label className="flex items-center gap-2 text-sm text-neutral-600">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
                   name="allowNegativeBalance"
                   checked={formData.allowNegativeBalance}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-neutral-300 text-indigo-600"
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600"
                 />
                 Allow overdraft (negative balance)
               </label>
             </>
           ) : (
-            <Input id="location" name="location" label="Location (e.g. Head Office Counter)" value={formData.location} onChange={handleChange} />
+            <Input id="location" name="location" label="Location" placeholder="e.g. Head Office Counter" value={formData.location} onChange={handleChange} />
           )}
 
-          <div className="mt-2 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
+            <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel
             </Button>
             <Button type="submit" isLoading={isCreating}>

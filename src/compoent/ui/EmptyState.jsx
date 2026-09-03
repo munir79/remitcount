@@ -2,10 +2,12 @@ import { Inbox } from "lucide-react";
 
 const EmptyState = ({ icon: Icon = Inbox, title, description }) => {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Icon className="mb-3 h-10 w-10 text-neutral-300" />
-      <p className="text-sm font-medium text-neutral-700">{title}</p>
-      {description && <p className="mt-1 text-xs text-neutral-400">{description}</p>}
+    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white py-16 text-center">
+      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+        <Icon className="h-6 w-6 text-slate-400" />
+      </div>
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      {description && <p className="mt-1 text-xs text-slate-500">{description}</p>}
     </div>
   );
 };
