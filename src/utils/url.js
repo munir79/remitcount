@@ -1,5 +1,6 @@
-export const baseUriBackend = "http://localhost:5000/";
-export const socketUri = "http://localhost:5000";
+// export const baseUriBackend = "http://localhost:5000/";
+export const baseUriBackend = "https://final-account-posh.onrender.com/";
+export const socketUri = "https://final-account-posh.onrender.com";
 
 // export const baseUriBackend = 'https://your-production-domain.com/';
 
