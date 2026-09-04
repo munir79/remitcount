@@ -59,7 +59,7 @@ const { data, isLoading, refetch } = useGetPosDashboardSummaryQuery({ period: "t
             <button
               key={tile.key}
               onClick={() => router.push(tile.href)}
-              className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl bg-indigo-600 p-4 text-center text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 active:scale-[0.98]"
+              className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[9px] bg-[#EEF2FF]  border  border-gray-200 p-4 text-center text-black  shadow-indigo-600/20 transition hover:bg-[#7e90cd] active:scale-[0.98]"
             >
               <tile.icon className="h-7 w-7" />
               <span className="text-sm font-semibold leading-tight">{tile.label}</span>
