@@ -1,17 +1,25 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, ChevronRight, ChevronDown, Loader2, Lock } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, Loader2, Lock, Folder, FolderOpen, FileText } from "lucide-react";
 import { useCreateAccountMutation, useGetAccountTreeQuery, useLazySuggestNextCodeQuery } from "@/redux/features/account/accountApi";
-import { useSocketEvent } from "@/socket/useSocketEvent";
 import Button from "@/compoent/ui/Button";
+import EmptyState from "@/compoent/ui/EmptyState";
 import Modal from "@/compoent/ui/Modal";
 import Select from "@/compoent/ui/Select";
 import Input from "@/compoent/ui/Input";
-import EmptyState from "@/compoent/ui/EmptyState";
+import { useSocketEvent } from "@/socket/useSocketEvent";
 
 
 const TYPES = ["Asset", "Liability", "Equity", "Income", "Expense"];
+
+const TYPE_COLORS = {
+  Asset: "text-sky-600",
+  Liability: "text-rose-600",
+  Equity: "text-violet-600",
+  Income: "text-emerald-600",
+  Expense: "text-amber-600",
+};
 
 const initialFormState = { name: "", code: "", type: "Asset", parent: "", isGroup: false, openingBalance: "0" };
 
@@ -19,48 +27,79 @@ const AccountTreeNode = ({ node, depth = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children?.length > 0;
 
-  return (
-    <div>
-      <div
-        className="flex items-center justify-between border-b border-neutral-100 px-3 py-2 hover:bg-neutral-50"
-        style={{ paddingLeft: `${depth * 20 + 12}px` }}
-      >
-        <div className="flex items-center gap-2">
+  if (node.isGroup) {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2.5 text-left transition hover:bg-slate-50"
+          style={{ paddingLeft: `${depth * 24 + 12}px` }}
+        >
           {hasChildren ? (
-            <button onClick={() => setIsExpanded((prev) => !prev)} className="text-neutral-400">
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+            ) : (
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+            )
           ) : (
-            <span className="w-4" />
+            <span className="w-4 shrink-0" />
           )}
-          <span className="text-xs text-neutral-400">{node.code}</span>
-          <span className={`text-sm ${node.isGroup ? "font-semibold text-neutral-800" : "text-neutral-600"}`}>
-            {node.name}
+          {isExpanded ? (
+            <FolderOpen className={`h-4 w-4 shrink-0 ${TYPE_COLORS[node.type] || "text-slate-400"}`} />
+          ) : (
+            <Folder className={`h-4 w-4 shrink-0 ${TYPE_COLORS[node.type] || "text-slate-400"}`} />
+          )}
+          <span className="text-xs text-slate-400">{node.code}</span>
+          <span className="text-sm font-bold text-slate-800">{node.name}</span>
+          {node.isSystemAccount && <Lock className="h-3 w-3 text-slate-300" />}
+          <span className="ml-auto text-xs text-slate-400">
+            {node.children?.length || 0} {node.children?.length === 1 ? "item" : "items"}
           </span>
-          {node.isSystemAccount && <Lock className="h-3 w-3 text-neutral-300" />}
-        </div>
-        {!node.isGroup && (
-          <span className="text-sm tabular-nums text-neutral-700">৳ {Number(node.currentBalance).toFixed(2)}</span>
+        </button>
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children.map((child) => (
+              <AccountTreeNode key={child._id} node={child} depth={depth + 1} />
+            ))}
+          </div>
         )}
       </div>
-      {hasChildren && isExpanded && node.children.map((child) => <AccountTreeNode key={child._id} node={child} depth={depth + 1} />)}
+    );
+  }
+
+  // Leaf Account — একটা "File" এর মতো, Balance সহ
+  return (
+    <div
+      className="flex items-center justify-between border-b border-slate-50 px-3 py-2.5 transition hover:bg-slate-50"
+      style={{ paddingLeft: `${depth * 24 + 12 + 22}px` }}
+    >
+      <div className="flex items-center gap-2">
+        <FileText className="h-3.5 w-3.5 shrink-0 text-slate-300" />
+        <span className="text-xs text-slate-400">{node.code}</span>
+        <span className="text-sm text-slate-700">{node.name}</span>
+        {node.isSystemAccount && <Lock className="h-3 w-3 text-slate-300" />}
+      </div>
+      <span className="text-sm tabular-nums font-semibold text-slate-900">৳ {Number(node.currentBalance).toFixed(2)}</span>
     </div>
   );
 };
 
 const AccountsPage = () => {
-  const { data, isLoading } = useGetAccountTreeQuery();
-  const { data: allAccountsData } = useGetAccountTreeQuery(); // Parent Dropdown এর জন্য একই Data Reuse
+  const { data, isLoading, refetch } = useGetAccountTreeQuery();
   const [createAccount, { isLoading: isCreating }] = useCreateAccountMutation();
   const [triggerSuggestCode] = useLazySuggestNextCodeQuery();
 
   const tree = data?.data || [];
 
+  useSocketEvent("company-data-updated", (payload) => {
+    if (payload?.module === "Account") refetch();
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
 
-  // Parent Dropdown এর জন্য Flat List বানানো
   const flattenAccounts = (nodes, result = []) => {
     nodes.forEach((n) => {
       if (n.isGroup) result.push(n);
@@ -70,10 +109,6 @@ const AccountsPage = () => {
   };
   const groupAccounts = flattenAccounts(tree).filter((a) => a.type === formData.type);
 
-  useSocketEvent("company-data-updated", () => {
-    // Account Tree কে Refetch করার Query Hook এই Component এ নাই সরাসরি (useGetAccountTreeQuery নিজেই Refetch দরকার)
-  });
-
   const handleTypeChange = async (e) => {
     const newType = e.target.value;
     setFormData((prev) => ({ ...prev, type: newType, parent: "" }));
@@ -81,7 +116,7 @@ const AccountsPage = () => {
       const result = await triggerSuggestCode(newType).unwrap();
       setFormData((prev) => ({ ...prev, code: result.data.suggestedCode }));
     } catch (err) {
-      // Suggestion Fail হলেও Form ব্যবহার করা যাবে, শুধু Code Manually দিতে হবে
+      // Ignore — Suggestion Fail হলেও Manually Code দেওয়া যাবে
     }
   };
 
@@ -96,6 +131,8 @@ const AccountsPage = () => {
       // Ignore
     }
   };
+
+  const closeModal = () => setIsModalOpen(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -115,9 +152,10 @@ const AccountsPage = () => {
         parent: formData.parent || null,
         isGroup: formData.isGroup,
         openingBalance: Number(formData.openingBalance) || 0,
+        clientRequestId: crypto.randomUUID(),
       }).unwrap();
       toast.success("Account created successfully");
-      setIsModalOpen(false);
+      closeModal();
     } catch (err) {
       toast.error(err?.data?.message || "Failed to create account");
     }
@@ -127,8 +165,8 @@ const AccountsPage = () => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Chart of Accounts</h1>
-          <p className="text-sm text-neutral-500">Manage your company&apos;s account structure</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Chart of Accounts</h1>
+          <p className="mt-0.5 text-sm text-slate-600">Folder-organized view of your account structure</p>
         </div>
         <Button onClick={openCreateModal}>
           <Plus className="h-4 w-4" />
@@ -141,16 +179,16 @@ const AccountsPage = () => {
           <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
         </div>
       ) : tree.length === 0 ? (
-        <EmptyState title="No accounts yet" description="Create your first account to get started" />
+        <EmptyState icon={Folder} title="No accounts yet" description="Create your first account to get started" />
       ) : (
-        <div className="rounded-lg border border-neutral-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
           {tree.map((node) => (
             <AccountTreeNode key={node._id} node={node} />
           ))}
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Account">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title="Create Account">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Select id="type" label="Account Type" value={formData.type} onChange={handleTypeChange}>
             {TYPES.map((t) => (
@@ -179,26 +217,26 @@ const AccountsPage = () => {
 
           <Select
             id="parent"
-            label="Parent Account (optional)"
+            label="Parent Folder (optional)"
             value={formData.parent}
             onChange={(e) => setFormData((prev) => ({ ...prev, parent: e.target.value }))}
           >
             <option value="">No parent (top-level)</option>
             {groupAccounts.map((g) => (
               <option key={g._id} value={g._id}>
-                {g.code} — {g.name}
+                📁 {g.code} — {g.name}
               </option>
             ))}
           </Select>
 
-          <label className="flex items-center gap-2 text-sm text-neutral-600">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
               checked={formData.isGroup}
               onChange={(e) => setFormData((prev) => ({ ...prev, isGroup: e.target.checked }))}
-              className="h-4 w-4 rounded border-neutral-300 text-indigo-600"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
             />
-            This is a Group Account (category, cannot receive transactions directly)
+            This is a Folder (Group Account — cannot receive transactions directly)
           </label>
 
           {!formData.isGroup && (
@@ -211,8 +249,8 @@ const AccountsPage = () => {
             />
           )}
 
-          <div className="mt-2 flex justify-end gap-3">
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
+          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
+            <Button type="button" variant="secondary" onClick={closeModal}>
               Cancel
             </Button>
             <Button type="submit" isLoading={isCreating}>
