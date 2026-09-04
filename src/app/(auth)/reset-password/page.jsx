@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useResetPasswordMutation } from "@/redux/features/auth/authApi";
@@ -7,8 +7,9 @@ import Card from "@/compoent/ui/Card";
 import Input from "@/compoent/ui/Input";
 import Button from "@/compoent/ui/Button";
 
-
-const ResetPasswordPage = () => {
+// ✅ Fix — useSearchParams() ব্যবহার করা সব Logic এই Inner Component এ,
+// যেটা Suspense এর ভেতরে থাকবে
+const ResetPasswordForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -72,6 +73,15 @@ const ResetPasswordPage = () => {
         </Button>
       </form>
     </Card>
+  );
+};
+
+// ✅ Fix — Default Export এ Suspense দিয়ে Wrap করা হচ্ছে
+const ResetPasswordPage = () => {
+  return (
+    <Suspense fallback={<Card>Loading...</Card>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 };
 

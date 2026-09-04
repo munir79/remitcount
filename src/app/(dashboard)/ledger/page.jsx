@@ -8,6 +8,7 @@ import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import BranchSelector from "@/compoent/ui/BranchSelector";
+import { useAuth } from "@/hooks/useAuth";
 
 
 const COLUMNS = [
