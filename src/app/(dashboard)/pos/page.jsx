@@ -1,9 +1,12 @@
 "use client";
 import CashierSessionBar from "@/compoent/pos/CashierSessionBar";
+import BranchSelector from "@/compoent/ui/BranchSelector";
+import { useAuth } from "@/hooks/useAuth";
 import { useGetPosDashboardSummaryQuery } from "@/redux/features/pos/posDashboardApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import { Send, Coins, ArrowDownCircle, Gift, BookUser, BookOpen, ArrowUpCircle, Receipt, BarChart3, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 
 const TILES = [
@@ -25,8 +28,12 @@ const RELEVANT_MODULES = [
 ];
 
 const PosDashboardPage = () => {
+  // PosDashboardPage Component এর ভেতরে:
+const { hasPermission } = useAuth();
+const [branch, setBranch] = useState("");
+const canFilterByBranch = hasPermission("cashierSession:manage");
   const router = useRouter();
-  const { data, isLoading, refetch } = useGetPosDashboardSummaryQuery({ period: "today" });
+const { data, isLoading, refetch } = useGetPosDashboardSummaryQuery({ period: "today", branch: branch || undefined });
 
   useSocketEvent("company-data-updated", (payload) => {
     if (RELEVANT_MODULES.includes(payload?.module)) refetch();
@@ -37,7 +44,13 @@ const PosDashboardPage = () => {
   return (
     <div className="p-6">
       <h1 className="mb-4 text-xl font-bold tracking-tight text-slate-900">POS Dashboard</h1>
-
+      
+      {/* // h1 এর ঠিক পরে, CashierSessionBar এর আগে/পরে যোগ করুন: */}
+{canFilterByBranch && (
+  <div className="mb-4 w-56">
+    <BranchSelector branch={branch} onBranchChange={setBranch} />
+  </div>
+)}
       <CashierSessionBar />
 
       <div className="flex flex-col gap-6 lg:flex-row">

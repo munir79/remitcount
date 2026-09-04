@@ -2,9 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Volume2, VolumeX, X } from "lucide-react";
 import { useDeleteNotificationMutation, useGetMyNotificationsQuery, useMarkAllNotificationsAsReadMutation, useMarkNotificationAsReadMutation } from "@/redux/features/notification/notificationApi";
-import { useNotificationSound } from "@/hooks/useNotificationSound";
 import { useSocketEvent } from "@/socket/useSocketEvent";
-
+import { useNotificationSound } from "@/hooks/useNotificationSound";
 
 const formatTimeAgo = (date) => {
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -29,10 +28,10 @@ const NotificationBell = () => {
   const [markAllAsRead] = useMarkAllNotificationsAsReadMutation();
   const [deleteNotification] = useDeleteNotificationMutation();
 
-  const notifications = data?.data?.notifications || [];
+  // ✅ Fix — Backend এর Actual Response Structure অনুযায়ী "data.data" 
+  const notifications = data?.data?.data || [];
   const unreadCount = data?.data?.unreadCount || 0;
 
-  // ✅ আপনার Pattern — সরাসরি Socket Event শুনে refetch() Call করা, কোনো Dispatch ছাড়াই
   useSocketEvent("notification", () => {
     playSound();
     refetch();

@@ -7,6 +7,7 @@ import Select from "@/compoent/ui/Select";
 import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import { useSocketEvent } from "@/socket/useSocketEvent";
+import BranchSelector from "@/compoent/ui/BranchSelector";
 
 
 const COLUMNS = [
@@ -19,15 +20,21 @@ const COLUMNS = [
 ];
 
 const LedgerPage = () => {
+
+
   const { data: accountData } = useGetAllAccountsQuery({ isGroup: false, limit: 500 });
   const accounts = accountData?.data?.data || [];
 
   const [selectedAccountId, setSelectedAccountId] = useState("");
 
-  const { data, isLoading, refetch } = useGetAccountLedgerQuery(
-    { accountId: selectedAccountId },
-    { skip: !selectedAccountId }
-  );
+  const { hasPermission } = useAuth();
+const [branch, setBranch] = useState("");
+const canFilterByBranch = hasPermission("cashierSession:manage");
+
+const { data, isLoading, refetch } = useGetAccountLedgerQuery(
+  { accountId: selectedAccountId, branch: branch || undefined },
+  { skip: !selectedAccountId }
+);
 
   useSocketEvent("company-data-updated", (payload) => {
     if (payload.module === "Journal" && selectedAccountId) refetch();
@@ -48,6 +55,17 @@ const LedgerPage = () => {
             </option>
           ))}
         </Select>
+        <div className="mb-6 flex flex-wrap items-end gap-4">
+  <div className="w-72">
+    <Select id="account" label="Select Account" value={selectedAccountId} onChange={(e) => setSelectedAccountId(e.target.value)}>
+      <option value="">Choose an account</option>
+      {accounts.map((a) => (
+        <option key={a._id} value={a._id}>{a.code} — {a.name}</option>
+      ))}
+    </Select>
+  </div>
+  {canFilterByBranch && <BranchSelector branch={branch} onBranchChange={setBranch} className="w-56" />}
+</div>
       </div>
 
       {!selectedAccountId ? (

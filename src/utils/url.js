@@ -176,3 +176,14 @@ export const GET_SINGLE_APPROVAL_REQUEST = (id) => `${API}/pos/approval/get-sing
 // ===== Audit Log =====
 export const GET_AUDIT_LOGS = `${API}/audit-log/get-audit-logs`;
 export const EXPORT_AUDIT_LOG_CSV = `${API}/audit-log/export-csv`;
+
+
+// ===== Reports =====
+export const GET_DASHBOARD_SUMMARY = `${API}/report/dashboard-summary`;
+export const GET_PROFIT_LOSS = `${API}/report/profit-loss`;
+export const GET_BALANCE_SHEET = `${API}/report/balance-sheet`;
+export const GET_CASH_FLOW = `${API}/report/cash-flow`;
+export const GET_DEBTORS_REPORT = `${API}/report/debtors`;
+export const EXPORT_DEBTORS_CSV = `${API}/report/debtors/export-csv`;
+export const GET_CREDITORS_REPORT = `${API}/report/creditors`;
+export const EXPORT_CREDITORS_CSV = `${API}/report/creditors/export-csv`;

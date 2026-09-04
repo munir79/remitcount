@@ -11,6 +11,8 @@ import Badge from "@/compoent/ui/Badge";
 import Pagination from "@/compoent/ui/Pagination";
 import PaymentInFormModal from "@/compoent/pos/PaymentInFormModal";
 import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
+import { useAuth } from "@/hooks/useAuth";
+import BranchSelector from "@/compoent/ui/BranchSelector";
 
 
 const COLUMNS = [
@@ -25,7 +27,10 @@ const STATUS_VARIANT = { Draft: "warning", Posted: "success" };
 
 const PaymentInListPage = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading, refetch } = useGetAllPaymentInQuery({ page, limit: 10 });
+  const { hasPermission } = useAuth();
+const [branch, setBranch] = useState("");
+const canFilterByBranch = hasPermission("cashierSession:manage");
+const { data, isLoading, refetch } = useGetAllPaymentInQuery({ page, limit: 10, branch: branch || undefined });
   const [postPaymentIn, { isLoading: isPosting }] = usePostPaymentInMutation();
 
   const records = data?.data?.data || [];
@@ -55,6 +60,11 @@ const PaymentInListPage = () => {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Payment In</h1>
           <p className="mt-0.5 text-sm text-slate-600">Receivable settlements</p>
         </div>
+        {canFilterByBranch && (
+  <div className="mb-4 w-56">
+    <BranchSelector branch={branch} onBranchChange={setBranch} />
+  </div>
+)}
         <Button onClick={() => setIsFormOpen(true)}>
           <Plus className="h-4 w-4" />
           New Payment In

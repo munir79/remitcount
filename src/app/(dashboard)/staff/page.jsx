@@ -37,14 +37,16 @@ const StaffPage = () => {
   const [editingRole, setEditingRole] = useState(null);
   const [deleteRoleTarget, setDeleteRoleTarget] = useState(null);
 
-  const handleRoleChange = async (staffMember, newRoleId) => {
-    try {
-      await updateStaff({ id: staffMember._id, data: { role: newRoleId } }).unwrap();
-      toast.success(`${staffMember.name}'s role updated`);
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to update role");
-    }
-  };
+ const handleRoleChange = async (staffMember, newRoleId) => {
+  try {
+    // ✅ "role" এর বদলে "roleId" পাঠানো হচ্ছে (Backend এর updateStaffRoleOrBranch 
+    // Function ও roleId Field আশা করে)
+    await updateStaff({ id: staffMember._id, data: { roleId: newRoleId } }).unwrap();
+    toast.success(`${staffMember.name}'s role updated`);
+  } catch (err) {
+    toast.error(err?.data?.message || "Failed to update role");
+  }
+};
 
   const handleToggleActive = async (staffMember) => {
     try {

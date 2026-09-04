@@ -19,8 +19,8 @@ const COLUMNS = [
   { key: "actions", label: "" },
 ];
 
-const initialFormState = { name: "", address: "", phone: "", isHeadOffice: false };
-
+// initialFormState এ code যোগ করুন
+const initialFormState = { name: "", code: "", address: "", phone: "", isHeadOffice: false };
 const BranchPage = () => {
   const { data, isLoading } = useGetAllBranchesQuery({ limit: 100 });
   const [createBranch, { isLoading: isCreating }] = useCreateBranchMutation();
@@ -40,17 +40,19 @@ const BranchPage = () => {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (branch) => {
-    setEditingBranch(branch);
-    setFormData({
-      name: branch.name,
-      address: branch.address || "",
-      phone: branch.phone || "",
-      isHeadOffice: branch.isHeadOffice || false,
-    });
-    setErrors({});
-    setIsModalOpen(true);
-  };
+ // openEditModal এ code যোগ করুন
+const openEditModal = (branch) => {
+  setEditingBranch(branch);
+  setFormData({
+    name: branch.name,
+    code: branch.code || "",
+    address: branch.address || "",
+    phone: branch.phone || "",
+    isHeadOffice: branch.isHeadOffice || false,
+  });
+  setErrors({});
+  setIsModalOpen(true);
+};
 
   const closeModal = () => setIsModalOpen(false);
 
@@ -60,27 +62,29 @@ const BranchPage = () => {
     setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      setErrors({ name: "Name is required" });
-      return;
-    }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  const newErrors = {};
+  if (!formData.name.trim()) newErrors.name = "Name is required";
+  if (!formData.code.trim()) newErrors.code = "Branch code is required";
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors);
+    return;
+  }
 
-    try {
-      if (editingBranch) {
-        await updateBranch({ id: editingBranch._id, data: formData }).unwrap();
-        toast.success("Branch updated successfully");
-      } else {
-        await createBranch(formData).unwrap();
-        toast.success("Branch created successfully");
-      }
-      closeModal();
-    } catch (err) {
-      toast.error(err?.data?.message || "Something went wrong");
+  try {
+    if (editingBranch) {
+      await updateBranch({ id: editingBranch._id, data: formData }).unwrap();
+      toast.success("Branch updated successfully");
+    } else {
+      await createBranch(formData).unwrap();
+      toast.success("Branch created successfully");
     }
-  };
-
+    closeModal();
+  } catch (err) {
+    toast.error(err?.data?.message || "Something went wrong");
+  }
+};
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -117,33 +121,36 @@ const BranchPage = () => {
           ))}
         </Table>
       )}
+{/* // Modal Form এ Input যোগ করুন (name এর ঠিক পরে) */}
+<Modal isOpen={isModalOpen} onClose={closeModal} title={editingBranch ? "Edit Branch" : "Add Branch"}>
+  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <div className="grid grid-cols-2 gap-4">
+      <Input id="name" name="name" label="Branch Name" required value={formData.name} onChange={handleChange} error={errors.name} />
+      <Input id="code" name="code" label="Branch Code" required placeholder="e.g. DHK01" value={formData.code} onChange={handleChange} error={errors.code} />
+    </div>
+    <Input id="address" name="address" label="Address" value={formData.address} onChange={handleChange} />
+    <Input id="phone" name="phone" label="Phone" value={formData.phone} onChange={handleChange} />
+    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+      <input
+        type="checkbox"
+        name="isHeadOffice"
+        checked={formData.isHeadOffice}
+        onChange={handleChange}
+        className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+      />
+      Mark as Head Office
+    </label>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingBranch ? "Edit Branch" : "Add Branch"}>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input id="name" name="name" label="Branch Name" required value={formData.name} onChange={handleChange} error={errors.name} />
-          <Input id="address" name="address" label="Address" value={formData.address} onChange={handleChange} />
-          <Input id="phone" name="phone" label="Phone" value={formData.phone} onChange={handleChange} />
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              name="isHeadOffice"
-              checked={formData.isHeadOffice}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-            />
-            Mark as Head Office
-          </label>
-
-          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isCreating || isUpdating}>
-              {editingBranch ? "Save Changes" : "Create"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+    <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
+      <Button type="button" variant="secondary" onClick={closeModal}>
+        Cancel
+      </Button>
+      <Button type="submit" isLoading={isCreating || isUpdating}>
+        {editingBranch ? "Save Changes" : "Create"}
+      </Button>
+    </div>
+  </form>
+</Modal>
     </div>
   );
 };

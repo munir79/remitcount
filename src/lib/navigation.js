@@ -1,7 +1,7 @@
 import {
-  LayoutDashboard, FileText, Receipt, Users, ShoppingCart, Wallet, BookOpen,
-  ListTree, Scale, Landmark, UserSquare2, BarChart3, Settings, Coins,
-  ArrowDownCircle, ArrowUpCircle, Send, Gift, Clock, CheckSquare, Activity,
+  LayoutDashboard, Receipt, Users, BookOpen,
+  ListTree, Scale, Landmark, BarChart3, Coins,
+  ArrowDownCircle, ArrowUpCircle, Send, Gift, Clock, CheckSquare,
   History, HandCoins, Building2,
 } from "lucide-react";
 
@@ -10,14 +10,6 @@ export const navigationConfig = [
     section: null,
     workspace: "accounting",
     items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, requiredPermission: "report:view" }],
-  },
-  {
-    section: "Sales",
-    workspace: "accounting",
-    items: [
-      { label: "Invoices", href: "/invoice", icon: FileText, requiredPermission: "invoice:read" },
-      { label: "Receipts", href: "/receipt", icon: Wallet, requiredPermission: "receipt:read" },
-    ],
   },
   {
     section: "Accounting",
@@ -32,18 +24,7 @@ export const navigationConfig = [
   {
     section: "Banking",
     workspace: "accounting",
-    items: [
-      { label: "Bank Accounts", href: "/bank-account", icon: Landmark, requiredPermission: "bankAccount:update" },
-      { label: "Reconciliation", href: "/reconciliation", icon: Scale, requiredPermission: "reconciliation:read" },
-    ],
-  },
-  {
-    section: "Payroll",
-    workspace: "accounting",
-    items: [
-      { label: "Employees", href: "/employee", icon: UserSquare2, requiredPermission: "employee:read" },
-      { label: "Payroll Runs", href: "/payroll", icon: Wallet, requiredPermission: "payroll:read" },
-    ],
+    items: [{ label: "Bank Accounts", href: "/bank-account", icon: Landmark, requiredPermission: "bankAccount:update" }],
   },
   {
     section: "Reports",
@@ -67,9 +48,7 @@ export const navigationConfig = [
       { label: "Expenses", href: "/pos/expense", icon: Receipt, requiredPermission: "posExpense:read" },
       { label: "Payment In", href: "/pos/payment-in", icon: ArrowDownCircle, requiredPermission: "paymentIn:read" },
       { label: "Payment Out", href: "/pos/payment-out", icon: ArrowUpCircle, requiredPermission: "paymentOut:read" },
-      { label: "Cashier Sessions", href: "/pos/cashier-session", icon: Clock, requiredPermission: "cashierSession:read" },
       { label: "Approvals", href: "/pos/approvals", icon: CheckSquare, requiredPermission: "approval:review" },
-      { label: "Staff Activity", href: "/pos/staff-activity", icon: Activity, requiredPermission: "cashierSession:manage" },
     ],
   },
   {

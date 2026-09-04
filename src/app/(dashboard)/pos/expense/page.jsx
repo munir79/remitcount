@@ -2,18 +2,19 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Send, XCircle, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useCancelPosExpenseMutation, useGetAllPosExpensesQuery, usePostPosExpenseMutation } from "@/redux/features/pos/posExpenseApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import Button from "@/compoent/ui/Button";
+import BranchSelector from "@/compoent/ui/BranchSelector";
 import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
+import Pagination from "@/compoent/ui/Pagination";
 import PosExpenseFormModal from "@/compoent/pos/PosExpenseFormModal";
 import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
-import Pagination from "@/compoent/ui/Pagination";
 import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
 
-// import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
 
 const COLUMNS = [
   { key: "number", label: "No." },
@@ -28,8 +29,12 @@ const STATUS_VARIANT = { Draft: "warning", Posted: "success", Cancelled: "neutra
 
 const PosExpenseListPage = () => {
   const [page, setPage] = useState(1);
+  const [branch, setBranch] = useState("");
   const { hasPermission } = useAuth();
-  const { data, isLoading, refetch } = useGetAllPosExpensesQuery({ page, limit: 10 });
+
+  const canFilterByBranch = hasPermission("cashierSession:manage");
+
+  const { data, isLoading, refetch } = useGetAllPosExpensesQuery({ page, limit: 10, branch: branch || undefined });
   const [postPosExpense, { isLoading: isPosting }] = usePostPosExpenseMutation();
   const [cancelPosExpense, { isLoading: isCancelling }] = useCancelPosExpenseMutation();
 
@@ -85,6 +90,18 @@ const PosExpenseListPage = () => {
           New Expense
         </Button>
       </div>
+
+      {canFilterByBranch && (
+        <div className="mb-4 w-56">
+          <BranchSelector
+            branch={branch}
+            onBranchChange={(val) => {
+              setBranch(val);
+              setPage(1);
+            }}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">

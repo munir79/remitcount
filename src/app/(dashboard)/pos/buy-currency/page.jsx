@@ -2,17 +2,21 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Send, XCircle, Loader2 } from "lucide-react";
+
+import { useAuth } from "@/hooks/useAuth";
 import { useCancelBuyCurrencyMutation, useGetAllBuyCurrencyQuery, usePostBuyCurrencyMutation } from "@/redux/features/pos/buyCurrencyApi";
-import Button from "@/compoent/ui/Button";
+import BranchSelector from "@/compoent/ui/BranchSelector";
 import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
+import Button from "@/compoent/ui/Button";
 import Pagination from "@/compoent/ui/Pagination";
 import BuyCurrencyFormModal from "@/compoent/pos/BuyCurrencyFormModal";
 import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
-import { useSocketEvent } from "@/socket/useSocketEvent";
 import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
-// import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
+import { useSocketEvent } from "@/socket/useSocketEvent";
+
+
 
 const COLUMNS = [
   { key: "number", label: "Buy No." },
@@ -28,8 +32,12 @@ const STATUS_VARIANT = { Draft: "warning", Posted: "success", Cancelled: "neutra
 
 const BuyCurrencyListPage = () => {
   const [page, setPage] = useState(1);
+  const [branch, setBranch] = useState("");
   const { hasPermission } = useAuth();
-  const { data, isLoading, refetch } = useGetAllBuyCurrencyQuery({ page, limit: 10 });
+
+  const canFilterByBranch = hasPermission("cashierSession:manage");
+
+  const { data, isLoading, refetch } = useGetAllBuyCurrencyQuery({ page, limit: 10, branch: branch || undefined });
   const [postBuyCurrency, { isLoading: isPosting }] = usePostBuyCurrencyMutation();
   const [cancelBuyCurrency, { isLoading: isCancelling }] = useCancelBuyCurrencyMutation();
 
@@ -86,6 +94,18 @@ const BuyCurrencyListPage = () => {
         </Button>
       </div>
 
+      {canFilterByBranch && (
+        <div className="mb-4 w-56">
+          <BranchSelector
+            branch={branch}
+            onBranchChange={(val) => {
+              setBranch(val);
+              setPage(1);
+            }}
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
@@ -101,7 +121,9 @@ const BuyCurrencyListPage = () => {
                 <td className="px-4 py-3 text-slate-700">{r.customer?.name}</td>
                 <td className="px-4 py-3 text-slate-700">{r.currencyStock?.currencyCode}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-slate-700">{Number(r.foreignAmount).toFixed(2)}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">৳ {Number(r.totalAmountMYR).toFixed(2)}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
+                  ৳ {Number(r.totalAmountMYR).toFixed(2)}
+                </td>
                 <td className="px-4 py-3">
                   <Badge variant={STATUS_VARIANT[r.status]}>{r.status}</Badge>
                 </td>
@@ -158,4 +180,3 @@ const BuyCurrencyListPage = () => {
 };
 
 export default BuyCurrencyListPage;
-

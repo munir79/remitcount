@@ -11,6 +11,8 @@ import Pagination from "@/compoent/ui/Pagination";
 import PaymentOutFormModal from "@/compoent/pos/PaymentOutFormModal";
 import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
 import { useSocketEvent } from "@/socket/useSocketEvent";
+import BranchSelector from "@/compoent/ui/BranchSelector";
+import { useAuth } from "@/hooks/useAuth";
 
 
 const COLUMNS = [
@@ -24,8 +26,13 @@ const COLUMNS = [
 const STATUS_VARIANT = { Draft: "warning", Posted: "success" };
 
 const PaymentOutListPage = () => {
+  const { hasPermission } = useAuth();
+const [branch, setBranch] = useState("");
+const canFilterByBranch = hasPermission("cashierSession:manage");
   const [page, setPage] = useState(1);
-  const { data, isLoading, refetch } = useGetAllPaymentOutQuery({ page, limit: 10 });
+  // const { data, isLoading, refetch } = useGetAllPaymentOutQuery({ page, limit: 10 });
+  const { data, isLoading, refetch } = useGetAllPaymentOutQuery({ page, limit: 10, branch: branch || undefined });
+
   const [postPaymentOut, { isLoading: isPosting }] = usePostPaymentOutMutation();
 
   const records = data?.data?.data || [];
@@ -55,6 +62,11 @@ const PaymentOutListPage = () => {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Payment Out</h1>
           <p className="mt-0.5 text-sm text-slate-600">Payable settlements</p>
         </div>
+        {canFilterByBranch && (
+  <div className="mb-4 w-56">
+    <BranchSelector branch={branch} onBranchChange={setBranch} />
+  </div>
+)}
         <Button onClick={() => setIsFormOpen(true)}>
           <Plus className="h-4 w-4" />
           New Payment Out

@@ -2,15 +2,18 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Send as SendIcon, XCircle, Loader2 } from "lucide-react";
-import { useSocketEvent } from "@/socket/useSocketEvent";
+import { useAuth } from "@/hooks/useAuth";
 import { useCancelSendMutation, useGetAllSendsQuery, usePostSendMutation } from "@/redux/features/pos/sendApi";
 import Button from "@/compoent/ui/Button";
+import BranchSelector from "@/compoent/ui/BranchSelector";
 import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
 import Pagination from "@/compoent/ui/Pagination";
 import SendFormModal from "@/compoent/pos/SendFormModal";
 import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
+import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
+import { useSocketEvent } from "@/socket/useSocketEvent";
 
 
 const COLUMNS = [
@@ -27,7 +30,12 @@ const STATUS_VARIANT = { Draft: "warning", Posted: "success", Cancelled: "neutra
 
 const SendListPage = () => {
   const [page, setPage] = useState(1);
-  const { data, isLoading, refetch } = useGetAllSendsQuery({ page, limit: 10 });
+  const [branch, setBranch] = useState("");
+  const { hasPermission } = useAuth();
+
+  const canFilterByBranch = hasPermission("cashierSession:manage");
+
+  const { data, isLoading, refetch } = useGetAllSendsQuery({ page, limit: 10, branch: branch || undefined });
   const [postSend, { isLoading: isPosting }] = usePostSendMutation();
   const [cancelSend, { isLoading: isCancelling }] = useCancelSendMutation();
 
@@ -41,6 +49,7 @@ const SendListPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [postTarget, setPostTarget] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [requestCancelTarget, setRequestCancelTarget] = useState(null);
 
   const handlePost = async () => {
     try {
@@ -62,6 +71,14 @@ const SendListPage = () => {
     }
   };
 
+  const handleCancelClick = (record) => {
+    if (hasPermission("send:delete")) {
+      setCancelTarget(record);
+    } else {
+      setRequestCancelTarget(record);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -74,6 +91,18 @@ const SendListPage = () => {
           New Send
         </Button>
       </div>
+
+      {canFilterByBranch && (
+        <div className="mb-4 w-56">
+          <BranchSelector
+            branch={branch}
+            onBranchChange={(val) => {
+              setBranch(val);
+              setPage(1);
+            }}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">
@@ -105,7 +134,7 @@ const SendListPage = () => {
                       </Button>
                     )}
                     {s.status !== "Cancelled" && s.customerPaidAmount === 0 && s.supplierPaidAmount === 0 && (
-                      <Button size="sm" variant="ghost" onClick={() => setCancelTarget(s)}>
+                      <Button size="sm" variant="ghost" onClick={() => handleCancelClick(s)}>
                         <XCircle className="h-3.5 w-3.5 text-rose-500" />
                       </Button>
                     )}
@@ -136,6 +165,13 @@ const SendListPage = () => {
         isLoading={isCancelling}
         title="Cancel Send"
         description={`Cancel ${cancelTarget?.sendNumber}? This will reverse any posted journal entries.`}
+      />
+      <RequestCancelModal
+        isOpen={Boolean(requestCancelTarget)}
+        onClose={() => setRequestCancelTarget(null)}
+        entityType="Send"
+        entityId={requestCancelTarget?._id}
+        entityLabel={requestCancelTarget?.sendNumber}
       />
     </div>
   );

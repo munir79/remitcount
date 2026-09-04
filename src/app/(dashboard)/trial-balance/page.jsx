@@ -1,9 +1,12 @@
 "use client";
-import Badge from "@/compoent/ui/Badge";
-import Table from "@/compoent/ui/Table";
+import { useState } from "react";
+import { Loader2, CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useGetTrialBalanceQuery } from "@/redux/features/ledger/ledgerApi";
+import BranchSelector from "@/compoent/ui/BranchSelector";
+import Table from "@/compoent/ui/Table";
 import { useSocketEvent } from "@/socket/useSocketEvent";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import Badge from "@/compoent/ui/Badge";
 
 
 const COLUMNS = [
@@ -15,10 +18,14 @@ const COLUMNS = [
 ];
 
 const TrialBalancePage = () => {
-  const { data, isLoading, refetch } = useGetTrialBalanceQuery();
+  const { hasPermission } = useAuth();
+  const [branch, setBranch] = useState("");
+  const canFilterByBranch = hasPermission("cashierSession:manage");
+
+  const { data, isLoading, refetch } = useGetTrialBalanceQuery({ branch: branch || undefined });
 
   useSocketEvent("company-data-updated", (payload) => {
-    if (payload.module === "Journal") refetch();
+    if (payload?.module === "Journal") refetch();
   });
 
   const report = data?.data;
@@ -26,8 +33,8 @@ const TrialBalancePage = () => {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-900">Trial Balance</h1>
-        {report && (
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">Trial Balance</h1>
+        {report && !report.isPartial && (
           <Badge variant={report.isBalanced ? "success" : "danger"}>
             {report.isBalanced ? (
               <span className="flex items-center gap-1">
@@ -42,6 +49,22 @@ const TrialBalancePage = () => {
         )}
       </div>
 
+      {canFilterByBranch && (
+        <div className="mb-4 w-56">
+          <BranchSelector branch={branch} onBranchChange={setBranch} />
+        </div>
+      )}
+
+      {report?.isPartial && (
+        <div className="mb-6 flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            This is a <span className="font-semibold">partial view</span> showing only this branch&apos;s ledger movement — not
+            the complete company-wide balance.
+          </p>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
@@ -49,19 +72,19 @@ const TrialBalancePage = () => {
       ) : (
         <Table columns={COLUMNS}>
           {report?.rows?.map((row) => (
-            <tr key={row.accountId} className="hover:bg-neutral-50">
-              <td className="px-4 py-3 text-neutral-500">{row.code}</td>
-              <td className="px-4 py-3 text-neutral-800">{row.name}</td>
-              <td className="px-4 py-3 text-neutral-500">{row.type}</td>
-              <td className="px-4 py-3 text-right tabular-nums text-neutral-700">
+            <tr key={row.accountId} className="hover:bg-slate-50">
+              <td className="px-4 py-3 text-slate-500">{row.code}</td>
+              <td className="px-4 py-3 text-slate-700">{row.name}</td>
+              <td className="px-4 py-3 text-slate-500">{row.type}</td>
+              <td className="px-4 py-3 text-right tabular-nums text-slate-700">
                 {row.debit > 0 ? `৳ ${row.debit.toFixed(2)}` : "—"}
               </td>
-              <td className="px-4 py-3 text-right tabular-nums text-neutral-700">
+              <td className="px-4 py-3 text-right tabular-nums text-slate-700">
                 {row.credit > 0 ? `৳ ${row.credit.toFixed(2)}` : "—"}
               </td>
             </tr>
           ))}
-          <tr className="bg-neutral-50 font-semibold">
+          <tr className="bg-slate-50 font-bold">
             <td className="px-4 py-3" colSpan={3}>
               Total
             </td>
