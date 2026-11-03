@@ -18,13 +18,15 @@ export const apiSlice = createApi({
   tagTypes: [
     "Profile", "Company", "Branch", "Role", "Permission", "Staff",
     "Account", "Journal", "Ledger", "TrialBalance",
-    "BankAccount", "Reconciliation",
+    "BankAccount", "Reconciliation", "CashTransfer",
     "Customer", "Vendor",
     "Employee", "Payroll",
     "Report", "AuditLog", "Notification",
     "CurrencyStock", "BuyCurrency", "SellCurrency", "Send",
-    "OtherIncomePos", "PosExpense", "PaymentIn", "PaymentOut",
+    "OtherIncomePos", "IncomeType", "PosExpense", "ExpenseType", "PaymentIn", "PaymentOut",
     "CashierSession", "ApprovalRequest",
+    "Currency", "ExchangeRate", "SupplierRate", "RateHistory",
+    "Beneficiary",
   ],
   // ✅ Note — refetchOnMountOrArgChange রাখছি না ডিফল্টে, কারণ Real-time Refresh এখন 
   // Socket Event এর refetch() দিয়েই হবে (Component নিজে থেকে Control করবে)

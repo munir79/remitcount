@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Receipt, Users, BookOpen,
   ListTree, Scale, Landmark, BarChart3, Coins,
   ArrowDownCircle, ArrowUpCircle, Send, Gift, Clock, CheckSquare,
-  History, HandCoins, Building2,
+  History, HandCoins, Building2, TrendingUp, Banknote, Wallet,
 } from "lucide-react";
 
 export const navigationConfig = [
@@ -24,7 +24,7 @@ export const navigationConfig = [
   {
     section: "Banking",
     workspace: "accounting",
-    items: [{ label: "Bank Accounts", href: "/bank-account", icon: Landmark, requiredPermission: "bankAccount:update" }],
+    items: [{ label: "Cash & Bank", href: "/bank-account", icon: Landmark, requiredPermission: "bankAccount:update" }],
   },
   {
     section: "Reports",
@@ -40,6 +40,8 @@ export const navigationConfig = [
     workspace: "pos",
     items: [
       { label: "POS Dashboard", href: "/pos", icon: LayoutDashboard, requiredPermission: "currencyStock:read" },
+      { label: "Today's Rates", href: "/pos/rates", icon: TrendingUp, requiredPermission: "rate:read" },
+      { label: "Cash & Sessions", href: "/pos/cash", icon: Wallet, requiredPermission: "cashierSession:read" },
       { label: "Currency Stock", href: "/pos/currency-stock", icon: Coins, requiredPermission: "currencyStock:read" },
       { label: "Buy Currency", href: "/pos/buy-currency", icon: ArrowDownCircle, requiredPermission: "currencyStock:read" },
       { label: "Sell Currency", href: "/pos/sell-currency", icon: ArrowUpCircle, requiredPermission: "currencyStock:read" },
@@ -67,6 +69,7 @@ export const navigationConfig = [
     items: [
       { label: "Company", href: "/company", icon: Building2, requiredPermission: "company:read" },
       { label: "Branches", href: "/branch", icon: Building2, requiredPermission: "branch:read" },
+      { label: "Currencies", href: "/currencies", icon: Banknote, requiredPermission: "currency:manage" },
       { label: "Roles & Staff", href: "/staff", icon: Users, requiredPermission: "user:read" },
       { label: "Audit Log", href: "/audit-log", icon: History, requiredPermission: "auditLog:read" },
     ],

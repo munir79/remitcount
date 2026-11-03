@@ -14,7 +14,7 @@ export const companyApi = apiSlice.injectEndpoints({
     }),
     updateCompany: builder.mutation({
       query: (payload) => ({ url: UPDATE_COMPANY, method: "PATCH", body: payload }),
-      invalidatesTags: ["Company"],
+      invalidatesTags: ["Company", "Profile"], // Profile এ Company র Timezone — বদলালে সব Screen এ সাথে সাথে
     }),
   }),
 });

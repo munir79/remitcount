@@ -45,6 +45,7 @@ export const {
   useForgotPasswordMutation,
   useVerifyOtpMutation,
   useResetPasswordMutation,
+  useGetMyProfileQuery,
   useLazyGetMyProfileQuery,
   useGetAllStaffQuery,
   useAddStaffMutation,

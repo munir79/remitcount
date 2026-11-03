@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useLazyGetMyProfileQuery, useSignUpMutation } from "@/redux/features/auth/authApi";
-import Card from "@/compoent/ui/Card";
+
 import Input from "@/compoent/ui/Input";
 import Button from "@/compoent/ui/Button";
 import { initSocket } from "@/socket/socket";
@@ -58,10 +58,10 @@ const RegisterPage = () => {
   };
 
   return (
-    <Card>
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold text-neutral-900">Create your account</h1>
-        <p className="mt-1 text-sm text-neutral-500">Start managing your currency exchange business</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-[28px] font-semibold tracking-tight text-slate-900">Create your account</h1>
+        <p className="mt-2 text-[15px] text-slate-500">Start managing your currency exchange business</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -92,7 +92,7 @@ const RegisterPage = () => {
           error={errors.password}
         />
 
-        <Button type="submit" isLoading={isLoading} className="mt-2 w-full">
+        <Button type="submit" isLoading={isLoading} size="lg" fullWidth className="mt-2">
           Create Account
         </Button>
       </form>
@@ -103,7 +103,7 @@ const RegisterPage = () => {
           Sign in
         </Link>
       </p>
-    </Card>
+    </div>
   );
 };
 

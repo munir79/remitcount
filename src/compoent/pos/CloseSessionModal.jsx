@@ -1,130 +1,111 @@
 "use client";
-import { useGetAllAccountsQuery } from "@/redux/features/account/accountApi";
-import { useCloseCashierSessionMutation } from "@/redux/features/pos/cashierSessionApi";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useCloseCashierSessionMutation, useGetAvailableDrawersQuery, useGetSessionSummaryQuery } from "@/redux/features/pos/cashierSessionApi";
 import Modal from "../ui/Modal";
-import Input from "../ui/Input";
-import Select from "../ui/Select";
 import Button from "../ui/Button";
+import PageLoader from "../ui/PageLoader";
+import CashCountInput, { CashDifference } from "./CashCountInput";
+import SessionReport from "./SessionReport";
+import CurrencyCountInputs, { missingCurrencyCount, toCurrencyCounts } from "./CurrencyCountInputs";
 
+const FORM_ID = "close-session-form";
 
+/**
+ * ✅ Session বন্ধ — কী ঢুকল/বের হলো তার Report দেখে, টাকা গুনে মেলানো
+ * গরমিল সীমার মধ্যে → নিজে থেকে "Cash Over/Short" এ; বেশি হলে Manager এর অনুমোদনের অপেক্ষায়
+ * বন্ধের পরে Report Page খোলে (Print)
+ */
 const CloseSessionModal = ({ isOpen, onClose, session }) => {
-  const { data: accountData } = useGetAllAccountsQuery({ isGroup: false, limit: 500 });
+  const router = useRouter();
+  const { data, isFetching } = useGetSessionSummaryQuery(session?._id, { skip: !isOpen || !session?._id, refetchOnMountOrArgChange: true });
+  const { data: drawerData } = useGetAvailableDrawersQuery(undefined, { skip: !isOpen });
   const [closeCashierSession, { isLoading }] = useCloseCashierSessionMutation();
+  const [counted, setCounted] = useState("");
+  const [currencyCounts, setCurrencyCounts] = useState({}); // Foreign Currency গোনা
+  const [error, setError] = useState("");
+  const [currencyError, setCurrencyError] = useState("");
 
-  const accounts = accountData?.data?.data || [];
-  const varianceAccounts = accounts.filter((a) => a.type === "Income" || a.type === "Expense");
-
-  const [physicalCash, setPhysicalCash] = useState("");
-  const [varianceAccount, setVarianceAccount] = useState("");
-  const [errors, setErrors] = useState({});
-
-  const currentSystemBalance = session?.cashAccount?.currentBalance || 0;
-  const estimatedVariance = physicalCash !== "" ? Number(physicalCash) - currentSystemBalance : null;
+  const summary = data?.data;
+  const limit = summary?.approvalLimit ?? drawerData?.data?.approvalLimit ?? 20;
+  const canManage = Boolean(drawerData?.data?.canManage);
 
   const handleClose = () => {
-    setPhysicalCash("");
-    setVarianceAccount("");
-    setErrors({});
+    setCounted("");
+    setCurrencyCounts({});
+    setError("");
+    setCurrencyError("");
     onClose();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newErrors = {};
-    if (physicalCash === "" || isNaN(Number(physicalCash)) || Number(physicalCash) < 0) {
-      newErrors.physicalCash = "Enter the counted physical cash amount";
-    }
-    if (estimatedVariance !== null && estimatedVariance !== 0 && !varianceAccount) {
-      newErrors.varianceAccount = "A variance account is required since there is a mismatch";
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (counted === "" || !(Number(counted) >= 0)) {
+      setError("Count the cash in the drawer");
       return;
     }
-
+    const missing = missingCurrencyCount(summary?.holdings || [], currencyCounts);
+    if (missing) {
+      setCurrencyError(`Count the ${missing} in the drawer too`);
+      return;
+    }
     try {
-      await closeCashierSession({
-        id: session._id,
-        data: { closingPhysicalCash: Number(physicalCash), varianceAccount: varianceAccount || undefined },
-      }).unwrap();
-      toast.success("Cashier session closed successfully");
+      const res = await closeCashierSession({ id: session._id, data: { closingPhysicalCash: Number(counted), currencyCounts: toCurrencyCounts(currencyCounts) } }).unwrap();
+      const closed = res.data;
+      toast.success(closed.status === "PendingApproval" ? "Sent to your manager for approval" : "Session closed");
       handleClose();
+      router.push(`/pos/cash/session/${closed._id}`);
     } catch (err) {
       toast.error(err?.data?.message || "Failed to close session");
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Close Cashier Session">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="rounded-lg bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
-          System balance (closing): <span className="font-semibold text-slate-900">৳ {Number(currentSystemBalance).toFixed(2)}</span>
-        </div>
-
-        <Input
-          id="physicalCash"
-          type="number"
-          step="0.01"
-          label="Physical Cash Counted"
-          required
-          value={physicalCash}
-          onChange={(e) => {
-            setPhysicalCash(e.target.value);
-            setErrors((prev) => ({ ...prev, physicalCash: "" }));
-          }}
-          error={errors.physicalCash}
-        />
-
-        {estimatedVariance !== null && (
-          <div
-            className={`rounded-lg px-3.5 py-2.5 text-sm font-semibold ${
-              estimatedVariance === 0
-                ? "bg-emerald-50 text-emerald-700"
-                : estimatedVariance > 0
-                ? "bg-indigo-50 text-indigo-700"
-                : "bg-rose-50 text-rose-700"
-            }`}
-          >
-            {estimatedVariance === 0
-              ? "✓ Matches exactly, no variance"
-              : `Variance: ${estimatedVariance > 0 ? "+" : ""}৳ ${estimatedVariance.toFixed(2)} (${
-                  estimatedVariance > 0 ? "Overage" : "Shortage"
-                })`}
-          </div>
-        )}
-
-        {estimatedVariance !== null && estimatedVariance !== 0 && (
-          <Select
-            id="varianceAccount"
-            label="Cash Over/Short Account"
-            required
-            value={varianceAccount}
-            onChange={(e) => {
-              setVarianceAccount(e.target.value);
-              setErrors((prev) => ({ ...prev, varianceAccount: "" }));
-            }}
-            error={errors.varianceAccount}
-          >
-            <option value="">Select account</option>
-            {varianceAccounts.map((a) => (
-              <option key={a._id} value={a._id}>
-                {a.code} — {a.name} ({a.type})
-              </option>
-            ))}
-          </Select>
-        )}
-
-        <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
-          <Button type="button" variant="secondary" onClick={handleClose}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title="Close cashier session"
+      description={session?.cashAccount?.name ? `End-of-shift count for ${session.cashAccount.name}` : "End-of-shift cash count"}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={handleClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" variant="danger" isLoading={isLoading}>
-            Close Session
+          <Button type="submit" form={FORM_ID} variant="danger" isLoading={isLoading} disabled={isFetching || !summary}>
+            Close session
           </Button>
-        </div>
-      </form>
+        </>
+      }
+    >
+      {!summary ? (
+        <PageLoader className="h-48" />
+      ) : (
+        <form id={FORM_ID} onSubmit={handleSubmit} noValidate className="space-y-4">
+          <SessionReport summary={summary} counted={counted} />
+          <CashCountInput
+            id="closingCount"
+            label="Cash in the drawer now"
+            value={counted}
+            onChange={(v) => {
+              setCounted(v);
+              setError("");
+            }}
+            error={error}
+          />
+          <CashDifference counted={counted} system={summary.expected} limit={limit} canManage={canManage} action="close" />
+          <CurrencyCountInputs
+            holdings={summary.holdings || []}
+            counts={currencyCounts}
+            onChange={(next) => {
+              setCurrencyCounts(next);
+              setCurrencyError("");
+            }}
+            error={currencyError}
+          />
+        </form>
+      )}
     </Modal>
   );
 };

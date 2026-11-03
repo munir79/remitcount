@@ -2,19 +2,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const SidebarItem = ({ label, href, icon: Icon }) => {
+const SidebarItem = ({ label, href, icon: Icon, onNavigate }) => {
   const pathname = usePathname();
   const isActive = pathname === href || (href !== "/pos" && href !== "/dashboard" && pathname.startsWith(href));
 
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${
-        isActive ? "bg-indigo-50 text-indigo-700" : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+      onClick={onNavigate}
+      aria-current={isActive ? "page" : undefined}
+      className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors ${
+        isActive ? "bg-indigo-600 text-white shadow-sm" : "text-slate-300 hover:bg-slate-800 hover:text-white"
       }`}
     >
-      {Icon && <Icon className="h-4 w-4 shrink-0" />}
-      {label}
+      {Icon && (
+        <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${isActive ? "text-white" : "text-slate-400 group-hover:text-white"}`} />
+      )}
+      <span className="truncate">{label}</span>
     </Link>
   );
 };

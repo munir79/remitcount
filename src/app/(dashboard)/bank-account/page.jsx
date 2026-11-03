@@ -1,175 +1,125 @@
 "use client";
 import { useState } from "react";
-import { toast } from "sonner";
-import { Plus, Loader2, Landmark } from "lucide-react";
-import { useCreateBankAccountMutation, useGetAllBankAccountsQuery } from "@/redux/features/bankAccount/bankAccountApi";
-import { useGetAllAccountsQuery } from "@/redux/features/account/accountApi";
+import Link from "next/link";
+import { Banknote, ChevronRight, Landmark, Plus, Wallet } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useGetAllBankAccountsQuery } from "@/redux/features/bankAccount/bankAccountApi";
+import { useSocketEvent } from "@/socket/useSocketEvent";
+import { formatMoney } from "@/lib/format";
+import PageHeader from "@/compoent/ui/PageHeader";
+import PageLoader from "@/compoent/ui/PageLoader";
 import EmptyState from "@/compoent/ui/EmptyState";
+import StatCard from "@/compoent/ui/StatCard";
 import Badge from "@/compoent/ui/Badge";
 import Button from "@/compoent/ui/Button";
-import Table from "@/compoent/ui/Table";
-import { useSocketEvent } from "@/socket/useSocketEvent";
-import Modal from "@/compoent/ui/Modal";
-import Select from "@/compoent/ui/Select";
-import Input from "@/compoent/ui/Input";
+import CashBankFormModal from "@/compoent/bank/CashBankFormModal";
 
+// Drawer = Counter (Cashier Session লাগে)
+const TYPE_META = {
+  Cash: { icon: Wallet, tone: "bg-amber-50 text-amber-600", fallback: "Cash drawer" },
+  Bank: { icon: Landmark, tone: "bg-sky-50 text-sky-600", fallback: "Bank account" },
+};
 
-const COLUMNS = [
-  { key: "name", label: "Account" },
-  { key: "type", label: "Type" },
-  { key: "details", label: "Details" },
-  { key: "balance", label: "Balance" },
-  { key: "status", label: "Status" },
-];
-
-const initialFormState = {
-  account: "",
-  accountType: "Bank",
-  bankName: "",
-  bankAccountNumber: "",
-  bankBranchName: "",
-  accountHolderName: "",
-  location: "",
-  allowNegativeBalance: false,
+const AccountCard = ({ ba }) => {
+  const meta = TYPE_META[ba.accountType] || TYPE_META.Cash;
+  const Icon = meta.icon;
+  const isBankType = ba.accountType === "Bank";
+  const balance = Number(ba.account?.currentBalance || 0);
+  return (
+    <Link
+      href={`/ledger?account=${ba.account?._id}`}
+      className="group flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition hover:border-indigo-200 hover:shadow-elevated"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${meta.tone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <Badge variant={ba.status === "active" ? "success" : "neutral"}>{ba.status}</Badge>
+      </div>
+      <p className="mt-4 truncate text-sm font-semibold text-slate-900">{ba.account?.name}</p>
+      <p className="truncate text-xs text-slate-500">
+        {[isBankType ? [ba.bankName, ba.bankAccountNumber].filter(Boolean).join(" · ") : ba.location, ba.branch?.name].filter(Boolean).join(" · ") || meta.fallback}
+      </p>
+      <div className="mt-4 flex items-end justify-between">
+        <p className={`text-xl font-semibold tabular-nums ${balance < 0 ? "text-rose-600" : "text-slate-900"}`}>{formatMoney(balance)}</p>
+        <span className="flex items-center gap-0.5 text-xs font-medium text-slate-400 group-hover:text-indigo-600">
+          Ledger
+          <ChevronRight className="h-3.5 w-3.5" />
+        </span>
+      </div>
+      {isBankType && ba.allowNegativeBalance && <p className="mt-2 text-xs text-slate-400">Overdraft allowed</p>}
+    </Link>
+  );
 };
 
 const BankAccountPage = () => {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("bankAccount:create");
   const { data, isLoading, refetch } = useGetAllBankAccountsQuery({ limit: 100 });
-  const { data: accountData } = useGetAllAccountsQuery({ type: "Asset", isGroup: false, limit: 500 });
-  const [createBankAccount, { isLoading: isCreating }] = useCreateBankAccountMutation();
+  const [modalType, setModalType] = useState(null); // "Cash" | "Bank" | null
 
   const bankAccounts = data?.data?.data || [];
-  const assetAccounts = accountData?.data?.data || [];
+  const cashAccounts = bankAccounts.filter((ba) => ba.accountType === "Cash");
+  const banks = bankAccounts.filter((ba) => ba.accountType === "Bank");
+  const sum = (list) => list.reduce((s, ba) => s + Number(ba.account?.currentBalance || 0), 0);
 
   useSocketEvent("company-data-updated", (payload) => {
-    if (payload?.module === "BankAccount") refetch();
+    if (["BankAccount", "Journal", "CashierSession", "CashTransfer"].includes(payload?.module)) refetch();
   });
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState(initialFormState);
-  const [errors, setErrors] = useState({});
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setFormData(initialFormState);
-    setErrors({});
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    if (!formData.account) newErrors.account = "Chart of Accounts link is required";
-    if (formData.accountType === "Bank" && !formData.bankName) newErrors.bankName = "Bank name is required";
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    try {
-      await createBankAccount({ ...formData, clientRequestId: crypto.randomUUID() }).unwrap();
-      toast.success("Bank/Cash account created successfully");
-      closeModal();
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to create account");
-    }
-  };
+  const addButton = canCreate && (
+    <Button onClick={() => setModalType("Cash")}>
+      <Plus className="h-4 w-4" />
+      Add Cash / Bank
+    </Button>
+  );
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Bank Accounts</h1>
-          <p className="mt-0.5 text-sm text-slate-600">Cash drawers and bank accounts</p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Account
-        </Button>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <PageHeader title="Cash & Bank" description="Cashier drawers and bank accounts with their current balances" actions={addButton} />
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        <StatCard label="Physical cash" value={formatMoney(sum(cashAccounts))} icon={Wallet} tone="amber" hint={`${cashAccounts.length} drawer(s)`} isLoading={isLoading} />
+        <StatCard label="Cash at bank" value={formatMoney(sum(banks))} icon={Landmark} tone="sky" hint={`${banks.length} account(s)`} isLoading={isLoading} />
+        <StatCard label="Total cash & bank" value={formatMoney(sum(bankAccounts))} icon={Banknote} tone="indigo" isLoading={isLoading} />
       </div>
 
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-        </div>
+        <PageLoader />
       ) : bankAccounts.length === 0 ? (
-        <EmptyState icon={Landmark} title="No bank/cash accounts yet" description="Register your first cash drawer or bank account" />
+        <EmptyState icon={Landmark} title="No cash drawers or banks yet" description="Add a cash drawer for each counter and your bank accounts — their accounts are created for you." action={addButton} />
       ) : (
-        <Table columns={COLUMNS}>
-          {bankAccounts.map((ba) => (
-            <tr key={ba._id} className="hover:bg-slate-50">
-              <td className="px-4 py-3 font-semibold text-slate-900">{ba.account?.name}</td>
-              <td className="px-4 py-3">
-                <Badge variant={ba.accountType === "Cash" ? "warning" : "primary"}>{ba.accountType}</Badge>
-              </td>
-              <td className="px-4 py-3 text-slate-700">
-                {ba.accountType === "Bank" ? `${ba.bankName || "—"} — ${ba.bankAccountNumber || "—"}` : ba.location || "—"}
-              </td>
-              <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">
-                ৳ {Number(ba.account?.currentBalance || 0).toFixed(2)}
-              </td>
-              <td className="px-4 py-3">
-                <Badge variant={ba.status === "active" ? "success" : "neutral"}>{ba.status}</Badge>
-              </td>
-            </tr>
+        <div className="space-y-8">
+          {[
+            { title: "Cash drawers", type: "Cash", list: cashAccounts, empty: "No cash drawer yet — add one for each counter.", add: "Add cash drawer" },
+            { title: "Cash at bank", type: "Bank", list: banks, empty: "No bank account yet.", add: "Add bank account" },
+          ].map((section) => (
+            <section key={section.title}>
+              <h2 className="mb-3 text-sm font-semibold text-slate-900">{section.title}</h2>
+              {section.list.length === 0 ? (
+                <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-6 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-500">{section.empty}</p>
+                  {canCreate && (
+                    <Button size="sm" variant="secondary" onClick={() => setModalType(section.type)}>
+                      <Plus className="h-4 w-4" />
+                      {section.add}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {section.list.map((ba) => (
+                    <AccountCard key={ba._id} ba={ba} />
+                  ))}
+                </div>
+              )}
+            </section>
           ))}
-        </Table>
+        </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title="Add Bank/Cash Account">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Select id="account" name="account" label="Chart of Accounts" required value={formData.account} onChange={handleChange} error={errors.account}>
-            <option value="">Select an Asset account</option>
-            {assetAccounts.map((a) => (
-              <option key={a._id} value={a._id}>
-                {a.code} — {a.name}
-              </option>
-            ))}
-          </Select>
 
-          <Select id="accountType" name="accountType" label="Type" value={formData.accountType} onChange={handleChange}>
-            <option value="Bank">Bank</option>
-            <option value="Cash">Cash</option>
-          </Select>
-
-          {formData.accountType === "Bank" ? (
-            <>
-              <Input id="bankName" name="bankName" label="Bank Name" required value={formData.bankName} onChange={handleChange} error={errors.bankName} />
-              <div className="grid grid-cols-2 gap-4">
-                <Input id="bankAccountNumber" name="bankAccountNumber" label="Account Number" value={formData.bankAccountNumber} onChange={handleChange} />
-                <Input id="bankBranchName" name="bankBranchName" label="Branch" value={formData.bankBranchName} onChange={handleChange} />
-              </div>
-              <Input id="accountHolderName" name="accountHolderName" label="Account Holder Name" value={formData.accountHolderName} onChange={handleChange} />
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  name="allowNegativeBalance"
-                  checked={formData.allowNegativeBalance}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-                />
-                Allow overdraft (negative balance)
-              </label>
-            </>
-          ) : (
-            <Input id="location" name="location" label="Location" placeholder="e.g. Head Office Counter" value={formData.location} onChange={handleChange} />
-          )}
-
-          <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
-            <Button type="button" variant="secondary" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" isLoading={isCreating}>
-              Create
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {modalType && <CashBankFormModal key={modalType} isOpen onClose={() => setModalType(null)} defaultType={modalType} />}
     </div>
   );
 };

@@ -1,6 +1,7 @@
-// export const baseUriBackend = "http://localhost:5000/";
-export const baseUriBackend = "https://final-account-posh.onrender.com/";
-export const socketUri = "https://final-account-posh.onrender.com";
+export const baseUriBackend = "http://localhost:5000/";
+// export const baseUriBackend = "https://final-account-posh.onrender.com/";
+// export const socketUri = "https://final-account-posh.onrender.com";
+export const socketUri = "http://localhost:5000";
 
 // export const baseUriBackend = 'https://your-production-domain.com/';
 
@@ -84,6 +85,7 @@ export const GET_ALL_BANK_ACCOUNTS = `${API}/bank-account/get-all-bank-accounts`
 export const GET_SINGLE_BANK_ACCOUNT = (id) => `${API}/bank-account/get-single-bank-account/${id}`;
 export const UPDATE_BANK_ACCOUNT = (id) => `${API}/bank-account/update-bank-account/${id}`;
 export const DELETE_BANK_ACCOUNT = (id) => `${API}/bank-account/delete-bank-account/${id}`;
+export const NEW_BANK_ACCOUNT_PREVIEW = `${API}/bank-account/new-account-preview`;
 
 
 // ===== POS — Dashboard =====
@@ -95,6 +97,15 @@ export const CLOSE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/close-s
 export const GET_ALL_CASHIER_SESSIONS = `${API}/pos/cashier-session/get-all-sessions`;
 export const GET_MY_OPEN_SESSION = `${API}/pos/cashier-session/get-my-open-session`;
 export const GET_SINGLE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/get-single-session/${id}`;
+export const APPROVE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/approve-session/${id}`;
+export const REJECT_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/reject-session/${id}`;
+export const GET_SESSION_SUMMARY = (id) => `${API}/pos/cashier-session/get-session-summary/${id}`;
+export const GET_AVAILABLE_DRAWERS = `${API}/pos/cashier-session/get-available-drawers`;
+export const GET_BRANCH_DAY_SUMMARY = `${API}/pos/cashier-session/get-branch-day-summary`;
+export const CREATE_CASH_TRANSFER = `${API}/pos/cash-transfer/create-cash-transfer`;
+export const CANCEL_CASH_TRANSFER = (id) => `${API}/pos/cash-transfer/cancel-cash-transfer/${id}`;
+export const GET_ALL_CASH_TRANSFERS = `${API}/pos/cash-transfer/get-all-cash-transfers`;
+export const GET_TRANSFER_ACCOUNTS = `${API}/pos/cash-transfer/get-transfer-accounts`;
 
 
 // ===== POS — Send =====
@@ -103,11 +114,20 @@ export const GET_ALL_SENDS = `${API}/pos/send/get-all-sends`;
 export const GET_SINGLE_SEND = (id) => `${API}/pos/send/get-single-send/${id}`;
 export const POST_SEND = (id) => `${API}/pos/send/post-send/${id}`;
 export const CANCEL_SEND = (id) => `${API}/pos/send/cancel-send/${id}`;
+export const GET_SEND_RECEIPT = (id) => `${API}/pos/send/get-send-receipt/${id}`;
+
+// ===== Saved Receiver (Beneficiary) =====
+export const GET_CUSTOMER_BENEFICIARIES = `${API}/beneficiary/get-customer-beneficiaries`;
+export const CREATE_BENEFICIARY = `${API}/beneficiary/create-beneficiary`;
+export const UPDATE_BENEFICIARY = (id) => `${API}/beneficiary/update-beneficiary/${id}`;
 
 
 // ===== POS — Currency Stock =====
 export const CREATE_CURRENCY_STOCK = `${API}/pos/currency-stock/create-currency-stock`;
 export const GET_ALL_CURRENCY_STOCKS = `${API}/pos/currency-stock/get-all-currency-stocks`;
+export const GET_MY_DRAWER_HOLDINGS = `${API}/pos/currency-stock/my-drawer-holdings`;
+export const OPENING_STOCK = `${API}/pos/currency-stock/opening-stock`;
+export const CANCEL_OPENING_STOCK = (id) => `${API}/pos/currency-stock/cancel-opening-stock/${id}`;
 
 // ===== POS — Buy Currency =====
 export const CREATE_BUY_CURRENCY = `${API}/pos/buy-currency/create-buy-currency`;
@@ -115,6 +135,7 @@ export const GET_ALL_BUY_CURRENCY = `${API}/pos/buy-currency/get-all-buy-currenc
 export const GET_SINGLE_BUY_CURRENCY = (id) => `${API}/pos/buy-currency/get-single-buy-currency/${id}`;
 export const POST_BUY_CURRENCY = (id) => `${API}/pos/buy-currency/post-buy-currency/${id}`;
 export const CANCEL_BUY_CURRENCY = (id) => `${API}/pos/buy-currency/cancel-buy-currency/${id}`;
+export const GET_BUY_RECEIPT = (id) => `${API}/pos/buy-currency/buy-receipt/${id}`;
 
 // ===== POS — Sell Currency =====
 export const CREATE_SELL_CURRENCY = `${API}/pos/sell-currency/create-sell-currency`;
@@ -122,6 +143,7 @@ export const GET_ALL_SELL_CURRENCY = `${API}/pos/sell-currency/get-all-sell-curr
 export const GET_SINGLE_SELL_CURRENCY = (id) => `${API}/pos/sell-currency/get-single-sell-currency/${id}`;
 export const POST_SELL_CURRENCY = (id) => `${API}/pos/sell-currency/post-sell-currency/${id}`;
 export const CANCEL_SELL_CURRENCY = (id) => `${API}/pos/sell-currency/cancel-sell-currency/${id}`;
+export const GET_SELL_RECEIPT = (id) => `${API}/pos/sell-currency/sell-receipt/${id}`;
 
 
 // ===== POS — Other Income =====
@@ -130,6 +152,9 @@ export const GET_ALL_OTHER_INCOMES = `${API}/pos/other-income/get-all-other-inco
 export const GET_SINGLE_OTHER_INCOME = (id) => `${API}/pos/other-income/get-single-other-income/${id}`;
 export const POST_OTHER_INCOME = (id) => `${API}/pos/other-income/post-other-income/${id}`;
 export const CANCEL_OTHER_INCOME = (id) => `${API}/pos/other-income/cancel-other-income/${id}`;
+export const INCOME_TYPES = `${API}/pos/other-income/income-types`;
+export const UPDATE_INCOME_TYPE = (id) => `${API}/pos/other-income/income-types/${id}`;
+export const GET_INCOME_RECEIPT = (id) => `${API}/pos/other-income/income-receipt/${id}`;
 
 // ===== POS — Expense =====
 export const CREATE_POS_EXPENSE = `${API}/pos/expense/create-expense`;
@@ -137,6 +162,10 @@ export const GET_ALL_POS_EXPENSES = `${API}/pos/expense/get-all-expenses`;
 export const GET_SINGLE_POS_EXPENSE = (id) => `${API}/pos/expense/get-single-expense/${id}`;
 export const POST_POS_EXPENSE = (id) => `${API}/pos/expense/post-expense/${id}`;
 export const CANCEL_POS_EXPENSE = (id) => `${API}/pos/expense/cancel-expense/${id}`;
+export const EXPENSE_TYPES = `${API}/pos/expense/expense-types`;
+export const UPDATE_EXPENSE_TYPE = (id) => `${API}/pos/expense/expense-types/${id}`;
+export const GET_EXPENSE_LEDGER = `${API}/pos/expense/expense-ledger`;
+export const GET_EXPENSE_VOUCHER = (id) => `${API}/pos/expense/expense-voucher/${id}`;
 
 // ===== POS — Payment In =====
 export const CREATE_PAYMENT_IN = `${API}/pos/payment-in/create-payment-in`;
@@ -188,3 +217,13 @@ export const GET_DEBTORS_REPORT = `${API}/report/debtors`;
 export const EXPORT_DEBTORS_CSV = `${API}/report/debtors/export-csv`;
 export const GET_CREDITORS_REPORT = `${API}/report/creditors`;
 export const EXPORT_CREDITORS_CSV = `${API}/report/creditors/export-csv`;
+export const GET_PARTY_STATEMENT = `${API}/report/party-statement`;
+
+// ===== Currency & Exchange Rate =====
+export const GET_ALL_CURRENCIES = `${API}/currency/get-all-currencies`;
+export const CREATE_CURRENCY = `${API}/currency/create-currency`;
+export const UPDATE_CURRENCY = (id) => `${API}/currency/update-currency/${id}`;
+export const RATE_BOARD = `${API}/rate/board`;
+export const SUPPLIER_RATES = `${API}/rate/supplier`;
+export const RATE_HISTORY = `${API}/rate/history`;
+export const RATES_AT = `${API}/rate/at`;

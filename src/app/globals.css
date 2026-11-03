@@ -1,45 +1,135 @@
-/* @import "tailwindcss";
+@import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =========================================================
+   Design Tokens — পুরো App এর রং, Font, Shadow এক জায়গা থেকে
+   ========================================================= */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Brand — Refined Indigo. পুরনো Page গুলো indigo-* ব্যবহার করে, তাই indigo কেই Brand বানানো হলো
+     যাতে সব Page একসাথে নতুন রং পায় */
+  --color-indigo-50: #f0f3ff;
+  --color-indigo-100: #e1e7ff;
+  --color-indigo-200: #c8d1fe;
+  --color-indigo-300: #a4b2fc;
+  --color-indigo-400: #7d88f8;
+  --color-indigo-500: #5c63f1;
+  --color-indigo-600: #4845e4;
+  --color-indigo-700: #3c37c9;
+  --color-indigo-800: #322fa2;
+  --color-indigo-900: #2d2d80;
+  --color-indigo-950: #1b1a4b;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Sidebar / Dark Surface */
+  --color-ink-950: #0b0f1a;
+  --color-ink-900: #111726;
+  --color-ink-800: #1a2236;
+  --color-ink-700: #263049;
+  --color-ink-600: #3a4560;
+  --color-ink-400: #8a94ad;
+  --color-ink-300: #b4bccf;
+
+  /* App Background */
+  --color-canvas: #f5f6fa;
+
+  --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06);
+  --shadow-elevated: 0 12px 32px -8px rgb(16 24 40 / 0.18), 0 4px 8px -4px rgb(16 24 40 / 0.08);
+
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-left: slide-in-left 220ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
-@import "tailwindcss";
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-slate-900);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* টাকার অঙ্ক সবসময় সমান প্রস্থে — Column এ সংখ্যা সোজা লাইনে থাকে */
+  table td,
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: var(--color-indigo-100);
+    color: var(--color-indigo-900);
+  }
+
+  /* Number Input এর Spinner Arrow লুকানো — POS এ টাইপ করেই Amount দেওয়া হয় */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-300) transparent;
+  }
+  .scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-700) transparent;
+  }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* =========================================================
+   Print — Report/Ledger Print করলে শুধু Content, Sidebar/Header/Button বাদ
+   ========================================================= */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  /* App Shell এর Fixed Height/Scroll খুলে দেওয়া, যাতে লম্বা Report কয়েক পাতায় যায় */
+  .app-shell,
+  .app-shell main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .shadow-card,
+  .shadow-elevated {
+    box-shadow: none !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
 }

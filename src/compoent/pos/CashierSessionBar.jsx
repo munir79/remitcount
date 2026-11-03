@@ -1,63 +1,128 @@
 "use client";
 import { useState } from "react";
-import { PlayCircle, StopCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeftRight, Clock, FileText, Hourglass, PlayCircle, StopCircle, Wallet } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useGetMyOpenSessionQuery } from "@/redux/features/pos/cashierSessionApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import Button from "../ui/Button";
-import Badge from "../ui/Badge";
 import OpenSessionModal from "./OpenSessionModal";
 import CloseSessionModal from "./CloseSessionModal";
+import CashTransferModal from "./CashTransferModal";
 
-
+/**
+ * ✅ POS এর উপরে — আমার Session: খোলা / অনুমোদনের অপেক্ষায় / বন্ধ
+ * খোলা থাকলে: Move cash (Drawer ↔ Bank), Report, Close
+ */
 const CashierSessionBar = () => {
+  const { hasPermission } = useAuth();
   const { data, isLoading, refetch } = useGetMyOpenSessionQuery();
-  const [isOpenModalOpen, setIsOpenModalOpen] = useState(false);
-  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+  const [modal, setModal] = useState(null); // "open" | "close" | "transfer"
 
   useSocketEvent("company-data-updated", (payload) => {
-    if (payload?.module === "CashierSession") refetch();
+    if (["CashierSession", "CashTransfer"].includes(payload?.module)) refetch();
   });
 
   const mySession = data?.data || null;
 
   if (isLoading) {
-    return (
-      <div className="mb-6 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3">
-        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-      </div>
-    );
+    return <div className="mb-6 h-[72px] animate-pulse rounded-2xl border border-slate-200/80 bg-white shadow-card" />;
   }
 
-  return (
-    <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3">
-      {mySession ? (
-        <>
-          <div className="flex items-center gap-3">
-            <Badge variant="success">Session Open</Badge>
-            <span className="text-sm text-slate-700">
-              {mySession.cashAccount?.name} — Opening: ৳ {Number(mySession.openingBalance).toFixed(2)}
-            </span>
-          </div>
-          <Button size="sm" variant="danger" onClick={() => setIsCloseModalOpen(true)}>
-            <StopCircle className="h-4 w-4" />
-            Close Session
-          </Button>
-        </>
-      ) : (
-        <>
-          <div className="flex items-center gap-2">
-            <Badge variant="neutral">No Active Session</Badge>
-            <span className="text-sm text-slate-600">Open a session to start recording cash transactions</span>
-          </div>
-          <Button size="sm" onClick={() => setIsOpenModalOpen(true)}>
-            <PlayCircle className="h-4 w-4" />
-            Open Session
-          </Button>
-        </>
-      )}
+  const isOpen = mySession?.status === "Open";
+  const isPending = mySession?.status === "PendingApproval";
+  const tone = isOpen ? "emerald" : "amber";
 
-      <OpenSessionModal isOpen={isOpenModalOpen} onClose={() => setIsOpenModalOpen(false)} />
-      <CloseSessionModal isOpen={isCloseModalOpen} onClose={() => setIsCloseModalOpen(false)} session={mySession} />
+  return (
+    <div
+      className={`mb-6 flex flex-col gap-4 rounded-2xl border bg-white px-5 py-4 shadow-card lg:flex-row lg:items-center lg:justify-between ${
+        isOpen ? "border-emerald-200" : "border-amber-200"
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tone === "emerald" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+          {isPending ? <Hourglass className="h-5 w-5" /> : <Wallet className="h-5 w-5" />}
+          <span className={`absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-white ${isOpen ? "bg-emerald-500" : "bg-amber-400"}`} />
+        </div>
+
+        {isOpen ? (
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">
+              Session open · <span className="font-medium text-slate-600">{mySession.cashAccount?.name}</span>
+            </p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-slate-500">
+              <span>
+                Opening <span className="font-medium tabular-nums text-slate-700">{formatMoney(mySession.openingBalance)}</span>
+              </span>
+              <span>
+                In drawer now <span className="font-medium tabular-nums text-slate-700">{formatMoney(mySession.cashAccount?.currentBalance)}</span>
+              </span>
+              {mySession.openedAt && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3.5 w-3.5" />
+                  {formatDateTime(mySession.openedAt)}
+                </span>
+              )}
+            </p>
+          </div>
+        ) : isPending ? (
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">Waiting for manager approval · {mySession.cashAccount?.name}</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">
+              Your count was {formatMoney(mySession.closingPhysicalCash)} ({mySession.variance > 0 ? "over" : "short"} {formatMoney(Math.abs(mySession.variance))}). No cash can be recorded until it is approved.
+            </p>
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900">No active cashier session</p>
+            <p className="mt-0.5 text-[13px] text-slate-500">Open your cash drawer to start recording cash transactions.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {isOpen && (
+          <>
+            {hasPermission("cashTransfer:create") && (
+              <Button variant="secondary" onClick={() => setModal("transfer")}>
+                <ArrowLeftRight className="h-4 w-4" />
+                Move cash
+              </Button>
+            )}
+            <Link
+              href={`/pos/cash/session/${mySession._id}`}
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <FileText className="h-4 w-4" />
+              Report
+            </Link>
+            <Button variant="secondary" onClick={() => setModal("close")}>
+              <StopCircle className="h-4 w-4 text-rose-500" />
+              Close session
+            </Button>
+          </>
+        )}
+        {isPending && (
+          <Link
+            href={`/pos/cash/session/${mySession._id}`}
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <FileText className="h-4 w-4" />
+            View report
+          </Link>
+        )}
+        {!mySession && (
+          <Button onClick={() => setModal("open")}>
+            <PlayCircle className="h-4 w-4" />
+            Open session
+          </Button>
+        )}
+      </div>
+
+      <OpenSessionModal isOpen={modal === "open"} onClose={() => setModal(null)} />
+      <CloseSessionModal isOpen={modal === "close"} onClose={() => setModal(null)} session={mySession} />
+      {isOpen && <CashTransferModal key={mySession._id} isOpen={modal === "transfer"} onClose={() => setModal(null)} defaultFrom={mySession.cashAccount?._id} />}
     </div>
   );
 };

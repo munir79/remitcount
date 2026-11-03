@@ -1,77 +1,104 @@
 "use client";
 import { useState } from "react";
-import { Download, Loader2, History } from "lucide-react";
+import { toast } from "sonner";
+import { Download, History } from "lucide-react";
 import { useGetAuditLogsQuery } from "@/redux/features/auditLog/auditLogApi";
 import { useGetAllStaffQuery } from "@/redux/features/auth/authApi";
-import Button from "@/compoent/ui/Button";
+import { EXPORT_AUDIT_LOG_CSV } from "@/utils/url";
+import { formatDateTime } from "@/lib/format";
+import PageHeader from "@/compoent/ui/PageHeader";
+import PageLoader from "@/compoent/ui/PageLoader";
 import EmptyState from "@/compoent/ui/EmptyState";
 import Table from "@/compoent/ui/Table";
 import Badge from "@/compoent/ui/Badge";
+import Button from "@/compoent/ui/Button";
+import Avatar from "@/compoent/ui/Avatar";
 import Pagination from "@/compoent/ui/Pagination";
 import Select from "@/compoent/ui/Select";
-import { EXPORT_AUDIT_LOG_CSV } from "@/utils/url";
-
+import { TD } from "@/compoent/ui/TableCells";
 
 const COLUMNS = [
+  { key: "when", label: "When" },
   { key: "user", label: "Staff" },
-  { key: "module", label: "Module" },
   { key: "action", label: "Action" },
-  { key: "description", label: "Description" },
-  { key: "date", label: "Date" },
+  { key: "description", label: "Details" },
 ];
 
 const ACTION_VARIANT = {
-  Create: "primary", Post: "success", Cancel: "danger", Reverse: "warning",
-  UpdatePermissions: "primary", Approved: "success", Rejected: "danger",
+  Create: "primary",
+  Update: "info",
+  Post: "success",
+  Approved: "success",
+  Cancel: "danger",
+  Rejected: "danger",
+  Delete: "danger",
+  Reverse: "warning",
+  UpdatePermissions: "primary",
 };
+
+const MODULES = ["BuyCurrency", "SellCurrency", "Send", "OtherIncome", "PosExpense", "PaymentIn", "PaymentOut", "Journal", "CashierSession", "Staff", "Role", "Customer", "Vendor"];
+const humanize = (key = "") => key.replace(/([a-z])([A-Z])/g, "$1 $2");
 
 const AuditLogPage = () => {
   const [page, setPage] = useState(1);
   const [userFilter, setUserFilter] = useState("");
+  const [moduleFilter, setModuleFilter] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
-  const { data, isLoading } = useGetAuditLogsQuery({ page, limit: 20, user: userFilter || undefined });
+  const { data, isLoading, isFetching } = useGetAuditLogsQuery({ page, limit: 20, user: userFilter || undefined, module: moduleFilter || undefined });
   const { data: staffData } = useGetAllStaffQuery({ limit: 100 });
 
   const logs = data?.data?.data || [];
   const pagination = data?.data?.pagination;
   const staff = staffData?.data?.data || [];
+  const hasFilters = Boolean(userFilter || moduleFilter);
 
-  const handleExportCsv = () => {
-    const token = localStorage.getItem("accessToken");
-    const params = new URLSearchParams();
-    if (userFilter) params.append("user", userFilter);
-    const url = `${EXPORT_AUDIT_LOG_CSV}?${params.toString()}`;
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.blob())
-      .then((blob) => {
-        const link = document.createElement("a");
-        link.href = window.URL.createObjectURL(blob);
-        link.download = "staff-activity-report.csv";
-        link.click();
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (userFilter) params.append("user", userFilter);
+      if (moduleFilter) params.append("module", moduleFilter);
+      const res = await fetch(`${EXPORT_AUDIT_LOG_CSV}?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
+      if (!res.ok) throw new Error("Export failed");
+      const url = window.URL.createObjectURL(await res.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "staff-activity-report.csv";
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Could not export the activity log.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Audit Log</h1>
-          <p className="mt-0.5 text-sm text-slate-600">Track all staff activity across the system</p>
-        </div>
-        <Button variant="secondary" onClick={handleExportCsv}>
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
-      </div>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <PageHeader
+        title="Audit Log"
+        description="Every create, post, cancel and approval — who did it and when"
+        actions={
+          <Button variant="secondary" onClick={handleExportCsv} isLoading={isExporting}>
+            {!isExporting && <Download className="h-4 w-4" />}
+            Export CSV
+          </Button>
+        }
+      />
 
-      <div className="mb-4 w-64">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row">
         <Select
           id="userFilter"
+          aria-label="Staff"
           value={userFilter}
           onChange={(e) => {
             setUserFilter(e.target.value);
             setPage(1);
           }}
+          className="sm:w-56"
         >
           <option value="">All staff</option>
           {staff.map((s) => (
@@ -80,28 +107,49 @@ const AuditLogPage = () => {
             </option>
           ))}
         </Select>
+        <Select
+          id="moduleFilter"
+          aria-label="Area"
+          value={moduleFilter}
+          onChange={(e) => {
+            setModuleFilter(e.target.value);
+            setPage(1);
+          }}
+          className="sm:w-56"
+        >
+          <option value="">All areas</option>
+          {MODULES.map((m) => (
+            <option key={m} value={m}>
+              {humanize(m)}
+            </option>
+          ))}
+        </Select>
       </div>
 
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-        </div>
+        <PageLoader />
       ) : logs.length === 0 ? (
-        <EmptyState icon={History} title="No activity yet" description="Staff actions will be recorded here" />
+        <EmptyState icon={History} title={hasFilters ? "No matching activity" : "No activity yet"} description={hasFilters ? "Try another staff member or area." : "Staff actions will be recorded here."} />
       ) : (
         <>
-          <Table columns={COLUMNS}>
+          <Table columns={COLUMNS} className={isFetching ? "opacity-70 transition-opacity" : ""}>
             {logs.map((log) => (
-              <tr key={log._id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-900">{log.user?.name || "System"}</td>
-                <td className="px-4 py-3 text-slate-700">{log.module}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={ACTION_VARIANT[log.action] || "neutral"}>{log.action}</Badge>
+              <tr key={log._id}>
+                <td className={`${TD} whitespace-nowrap text-[13px] text-slate-500`}>{formatDateTime(log.createdAt)}</td>
+                <td className={TD}>
+                  <div className="flex items-center gap-2">
+                    <Avatar name={log.user?.name || "System"} size="xs" />
+                    <span className="font-medium text-slate-800">{log.user?.name || "System"}</span>
+                  </div>
                 </td>
-                <td className="px-4 py-3 text-slate-700">{log.description}</td>
-                <td className="px-4 py-3 text-slate-500">
-                  {new Date(log.createdAt).toLocaleDateString("en-GB")}{" "}
-                  {new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <td className={TD}>
+                  <div className="flex flex-col items-start gap-1">
+                    <Badge variant={ACTION_VARIANT[log.action] || "neutral"}>{humanize(log.action)}</Badge>
+                    <span className="text-xs text-slate-500">{humanize(log.module)}</span>
+                  </div>
+                </td>
+                <td className={`${TD} max-w-xl text-slate-700`}>
+                  <p className="line-clamp-2">{log.description}</p>
                 </td>
               </tr>
             ))}

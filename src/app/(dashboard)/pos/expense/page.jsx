@@ -1,178 +1,156 @@
 "use client";
 import { useState } from "react";
-import { toast } from "sonner";
-import { Plus, Send, XCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { BookOpenText, Briefcase, Clock, Receipt, ReceiptText, Settings2, Truck, Wallet } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useCancelPosExpenseMutation, useGetAllPosExpensesQuery, usePostPosExpenseMutation } from "@/redux/features/pos/posExpenseApi";
-import { useSocketEvent } from "@/socket/useSocketEvent";
-import Button from "@/compoent/ui/Button";
-import BranchSelector from "@/compoent/ui/BranchSelector";
-import EmptyState from "@/compoent/ui/EmptyState";
-import Table from "@/compoent/ui/Table";
-import Badge from "@/compoent/ui/Badge";
-import Pagination from "@/compoent/ui/Pagination";
+import { formatMoney } from "@/lib/format";
+import { useCancelPosExpenseMutation, useGetAllPosExpensesQuery, useGetExpenseTypesQuery, usePostPosExpenseMutation } from "@/redux/features/pos/posExpenseApi";
+import DocumentListPage from "@/compoent/pos/DocumentListPage";
 import PosExpenseFormModal from "@/compoent/pos/PosExpenseFormModal";
-import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
-import RequestCancelModal from "@/compoent/pos/RequestCancelModal";
-
+import ExpenseTypesModal from "@/compoent/pos/ExpenseTypesModal";
+import Badge from "@/compoent/ui/Badge";
+import Select from "@/compoent/ui/Select";
+import StatCard from "@/compoent/ui/StatCard";
+import { DocCell, MoneyCell, PartyCell, TD } from "@/compoent/ui/TableCells";
 
 const COLUMNS = [
   { key: "number", label: "No." },
-  { key: "type", label: "Type" },
-  { key: "classification", label: "Classification" },
-  { key: "amount", label: "Amount" },
-  { key: "status", label: "Status" },
-  { key: "actions", label: "" },
+  { key: "type", label: "Expense" },
+  { key: "classification", label: "Class" },
+  { key: "paidFrom", label: "Paid from" },
+  { key: "amount", label: "Amount", align: "right" },
 ];
 
-const STATUS_VARIANT = { Draft: "warning", Posted: "success", Cancelled: "neutral" };
-
-const PosExpenseListPage = () => {
-  const [page, setPage] = useState(1);
-  const [branch, setBranch] = useState("");
-  const { hasPermission } = useAuth();
-
-  const canFilterByBranch = hasPermission("cashierSession:manage");
-
-  const { data, isLoading, refetch } = useGetAllPosExpensesQuery({ page, limit: 10, branch: branch || undefined });
-  const [postPosExpense, { isLoading: isPosting }] = usePostPosExpenseMutation();
-  const [cancelPosExpense, { isLoading: isCancelling }] = useCancelPosExpenseMutation();
-
-  const records = data?.data?.data || [];
-  const pagination = data?.data?.pagination;
-
-  useSocketEvent("company-data-updated", (payload) => {
-    if (payload?.module === "PosExpense") refetch();
-  });
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [postTarget, setPostTarget] = useState(null);
-  const [cancelTarget, setCancelTarget] = useState(null);
-  const [requestCancelTarget, setRequestCancelTarget] = useState(null);
-
-  const handlePost = async () => {
-    try {
-      await postPosExpense(postTarget._id).unwrap();
-      toast.success("Posted successfully");
-      setPostTarget(null);
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to post");
-    }
-  };
-
-  const handleCancel = async () => {
-    try {
-      await cancelPosExpense({ id: cancelTarget._id, reason: "Cancelled by user" }).unwrap();
-      toast.success("Cancelled successfully");
-      setCancelTarget(null);
-    } catch (err) {
-      toast.error(err?.data?.message || "Failed to cancel");
-    }
-  };
-
-  const handleCancelClick = (record) => {
-    if (hasPermission("posExpense:delete")) {
-      setCancelTarget(record);
-    } else {
-      setRequestCancelTarget(record);
-    }
-  };
-
+const ExpenseFilters = ({ filters, types }) => {
+  const field = (key, label, options, width = "w-40") => (
+    <Select id={`expense-${key}`} label={label} value={filters.extra[key] || ""} onChange={(e) => filters.setExtra(key, e.target.value)} className={width}>
+      {options.map((o) => (
+        <option key={o.value || "any"} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </Select>
+  );
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Expenses</h1>
-          <p className="mt-0.5 text-sm text-slate-600">Day-to-day operating expenses</p>
-        </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New Expense
-        </Button>
-      </div>
-
-      {canFilterByBranch && (
-        <div className="mb-4 w-56">
-          <BranchSelector
-            branch={branch}
-            onBranchChange={(val) => {
-              setBranch(val);
-              setPage(1);
-            }}
-          />
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
-        </div>
-      ) : records.length === 0 ? (
-        <EmptyState title="No expense records yet" description="Add your first expense" />
-      ) : (
-        <>
-          <Table columns={COLUMNS}>
-            {records.map((r) => (
-              <tr key={r._id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-semibold text-slate-900">{r.expenseNumber}</td>
-                <td className="px-4 py-3 text-slate-700">{r.expenseType}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={r.classification === "Admin" ? "primary" : "neutral"}>{r.classification}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold text-slate-900">৳ {Number(r.amount).toFixed(2)}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={STATUS_VARIANT[r.status]}>{r.status}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {r.status === "Draft" && (
-                      <Button size="sm" onClick={() => setPostTarget(r)}>
-                        <Send className="h-3.5 w-3.5" />
-                        Post
-                      </Button>
-                    )}
-                    {r.status !== "Cancelled" && (
-                      <Button size="sm" variant="ghost" onClick={() => handleCancelClick(r)}>
-                        <XCircle className="h-3.5 w-3.5 text-rose-500" />
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </Table>
-          <Pagination pagination={pagination} onPageChange={setPage} />
-        </>
-      )}
-
-      <PosExpenseFormModal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} />
-
-      <ConfirmDialog
-        isOpen={Boolean(postTarget)}
-        onClose={() => setPostTarget(null)}
-        onConfirm={handlePost}
-        isLoading={isPosting}
-        variant="primary"
-        title="Post Expense"
-        description={`Post ${postTarget?.expenseNumber}?`}
-      />
-      <ConfirmDialog
-        isOpen={Boolean(cancelTarget)}
-        onClose={() => setCancelTarget(null)}
-        onConfirm={handleCancel}
-        isLoading={isCancelling}
-        title="Cancel Expense"
-        description={`Cancel ${cancelTarget?.expenseNumber}?`}
-      />
-      <RequestCancelModal
-        isOpen={Boolean(requestCancelTarget)}
-        onClose={() => setRequestCancelTarget(null)}
-        entityType="PosExpense"
-        entityId={requestCancelTarget?._id}
-        entityLabel={requestCancelTarget?.expenseNumber}
-      />
-    </div>
+    <>
+      {field("expenseType", "Type", [{ value: "", label: "All types" }, ...types.map((t) => ({ value: t._id, label: t.name }))], "w-48")}
+      {field("classification", "Class", [
+        { value: "", label: "Admin & Direct" },
+        { value: "Admin", label: "Admin" },
+        { value: "Direct", label: "Direct" },
+      ])}
+      {field("paymentMethod", "Paid by", [
+        { value: "", label: "Cash & Bank" },
+        { value: "Cash", label: "Cash" },
+        { value: "Bank", label: "Bank" },
+      ])}
+      {field("approval", "Approval", [
+        { value: "", label: "Any" },
+        { value: "Waiting", label: "Waiting approval" },
+      ])}
+    </>
   );
 };
 
-export default PosExpenseListPage;
+const ExpenseSummary = ({ summary }) => (
+  <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <StatCard label="Admin expenses" value={formatMoney(summary.admin)} icon={Briefcase} tone="indigo" hint="Rent, salaries, bills…" />
+    <StatCard label="Direct expenses" value={formatMoney(summary.direct)} icon={Truck} tone="sky" hint="Cost of transactions" />
+    <StatCard label="Total" value={formatMoney(summary.total)} icon={Wallet} tone="rose" hint={`${summary.count} confirmed · drafts & cancelled not counted`} />
+    <StatCard
+      label="Waiting approval"
+      value={summary.waitingApproval.toLocaleString("en-MY")}
+      icon={Clock}
+      tone={summary.waitingApproval > 0 ? "amber" : "slate"}
+      hint="Above the cashier limit"
+    />
+  </div>
+);
+
+const ExpenseListPage = () => {
+  const { user, hasPermission } = useAuth();
+  const canManageTypes = hasPermission("posExpense:types");
+  const canApprove = hasPermission("posExpense:approve");
+  const { data: typeData } = useGetExpenseTypesQuery();
+  const types = typeData?.data || [];
+  const [typesOpen, setTypesOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex justify-end gap-4 px-4 pt-4 sm:px-6 lg:px-8 print:hidden">
+        <Link href="/pos/expense/ledger" className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-800">
+          <BookOpenText className="h-4 w-4" />
+          Expense ledger
+        </Link>
+        {canManageTypes && (
+          <button type="button" onClick={() => setTypesOpen(true)} className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600 hover:text-indigo-800">
+            <Settings2 className="h-4 w-4" />
+            Expense types
+          </button>
+        )}
+      </div>
+      <DocumentListPage
+        title="Expenses"
+        description="Admin and direct expenses — paid by cash or bank"
+        newLabel="New Expense"
+        icon={Receipt}
+        emptyTitle="No expenses yet"
+        emptyDescription="Record rent, salaries, utilities and other costs."
+        searchPlaceholder="No., type, description, paid to…"
+        useListQuery={useGetAllPosExpensesQuery}
+        usePostMutation={usePostPosExpenseMutation}
+        useCancelMutation={useCancelPosExpenseMutation}
+        socketModule="PosExpense"
+        entityType="PosExpense"
+        numberField="expenseNumber"
+        cancelPermission="posExpense:delete"
+        canCancelRecord={(r) => r.status !== "Cancelled"}
+        // সীমার বেশি → শুধু Admin / Manager; Cashier শুধু নিজের Draft
+        canPostRecord={(r) => canApprove || (!r.awaitingApproval && (r.createdBy?._id || r.createdBy) === user?._id)}
+        renderStatusExtra={(r) =>
+          r.status === "Draft" &&
+          r.awaitingApproval && (
+            <Badge variant="warning" dot={false}>
+              Waiting approval
+            </Badge>
+          )
+        }
+        postDescription="This takes the money out of the drawer or bank and records the expense."
+        FormModal={PosExpenseFormModal}
+        manualApply
+        renderFilters={(filters) => <ExpenseFilters filters={filters} types={types} />}
+        renderSummary={(summary) => <ExpenseSummary summary={summary} />}
+        renderExtraActions={(r) =>
+          r.status !== "Draft" && (
+            <Link
+              href={`/pos/expense/${r._id}/voucher`}
+              title="View voucher"
+              aria-label={`Voucher for ${r.expenseNumber}`}
+              className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-indigo-600 transition hover:bg-indigo-50"
+            >
+              <ReceiptText className="h-4 w-4" />
+              Voucher
+            </Link>
+          )
+        }
+        columns={COLUMNS}
+        renderCells={(r) => (
+          <>
+            <DocCell number={r.expenseNumber} date={r.date} />
+            <PartyCell name={r.expenseType} sub={[r.description, r.paidTo && `to ${r.paidTo}`].filter(Boolean).join(" · ") || r.expenseAccount?.name} />
+            <td className={TD}>
+              <Badge variant={r.classification === "Admin" ? "primary" : "info"} dot={false}>
+                {r.classification}
+              </Badge>
+            </td>
+            <td className={`${TD} text-slate-600`}>{r.paymentAccount?.name || "—"}</td>
+            <MoneyCell value={r.amount} strong />
+          </>
+        )}
+      />
+      {canManageTypes && <ExpenseTypesModal isOpen={typesOpen} onClose={() => setTypesOpen(false)} />}
+    </>
+  );
+};
+
+export default ExpenseListPage;

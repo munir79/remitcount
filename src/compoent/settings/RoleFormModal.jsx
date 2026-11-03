@@ -1,87 +1,94 @@
 "use client";
-import { useCreateRoleMutation, useGetAllPermissionsQuery, useUpdateRoleMutation } from "@/redux/features/role/roleApi";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Check, Search } from "lucide-react";
+import { useCreateRoleMutation, useGetAllPermissionsQuery, useUpdateRoleMutation } from "@/redux/features/role/roleApi";
 import Modal from "../ui/Modal";
 import Input from "../ui/Input";
-import Button from "../ui/Button";
+import FormModalFooter from "../ui/FormModalFooter";
 
+const FORM_ID = "role-form";
 
-const RoleFormModal = ({ isOpen, onClose, editingRole }) => {
+// "currencyStock" → "Currency Stock"
+const humanize = (key = "") => key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (c) => c.toUpperCase());
+
+/**
+ * ✅ Form এর State শুধু এখানে — Parent এ key বদলালে নতুন করে Mount হয়,
+ * তাই editingRole থেকে State ভরাতে useEffect লাগে না (আগের Lint Error এর Fix)
+ */
+const RoleForm = ({ editingRole, onDone, setSubmitting }) => {
   const { data: permissionData } = useGetAllPermissionsQuery();
-  const [createRole, { isLoading: isCreating }] = useCreateRoleMutation();
-  const [updateRole, { isLoading: isUpdating }] = useUpdateRoleMutation();
+  const [createRole] = useCreateRoleMutation();
+  const [updateRole] = useUpdateRoleMutation();
 
-  const permissions = permissionData?.data || [];
-  const groupedPermissions = permissions.reduce((acc, p) => {
-    acc[p.module] = acc[p.module] || [];
-    acc[p.module].push(p);
-    return acc;
-  }, {});
-
-  const [name, setName] = useState("");
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [name, setName] = useState(editingRole?.name || "");
+  const [selected, setSelected] = useState(() => new Set(editingRole?.permissions?.map((p) => p._id) || []));
+  const [filter, setFilter] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (editingRole) {
-      setName(editingRole.name);
-      setSelectedPermissions(editingRole.permissions?.map((p) => p._id) || []);
-    } else {
-      setName("");
-      setSelectedPermissions([]);
+  const groups = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const map = new Map();
+    for (const p of permissionData?.data || []) {
+      if (q && !`${p.module} ${p.action} ${p.description || ""}`.toLowerCase().includes(q)) continue;
+      if (!map.has(p.module)) map.set(p.module, []);
+      map.get(p.module).push(p);
     }
-  }, [editingRole, isOpen]);
+    return [...map.entries()];
+  }, [permissionData, filter]);
 
-  const togglePermission = (id) => {
-    setSelectedPermissions((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
-  };
+  const toggle = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
-  const toggleModule = (modulePermissions) => {
-    const ids = modulePermissions.map((p) => p._id);
-    const allSelected = ids.every((id) => selectedPermissions.includes(id));
-    if (allSelected) {
-      setSelectedPermissions((prev) => prev.filter((id) => !ids.includes(id)));
-    } else {
-      setSelectedPermissions((prev) => [...new Set([...prev, ...ids])]);
-    }
-  };
-
-  const handleClose = () => {
-    setName("");
-    setSelectedPermissions([]);
-    setError("");
-    onClose();
+  const toggleModule = (perms) => {
+    const allOn = perms.every((p) => selected.has(p._id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      perms.forEach((p) => (allOn ? next.delete(p._id) : next.add(p._id)));
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!editingRole && !name.trim()) {
-      setError("Role name is required");
+      setError("Enter a role name");
       return;
     }
-
+    setSubmitting(true);
     try {
+      const permissions = [...selected];
       if (editingRole) {
-        await updateRole({ id: editingRole._id, data: { permissions: selectedPermissions } }).unwrap();
-        toast.success("Role updated successfully");
+        await updateRole({ id: editingRole._id, data: { permissions } }).unwrap();
+        toast.success(`"${editingRole.name}" permissions saved`);
       } else {
-        await createRole({ name, permissions: selectedPermissions }).unwrap();
-        toast.success("Role created successfully");
+        await createRole({ name: name.trim(), permissions }).unwrap();
+        toast.success(`Role "${name.trim()}" created`);
       }
-      handleClose();
+      onDone();
     } catch (err) {
       toast.error(err?.data?.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={editingRole ? `Edit "${editingRole.name}" Permissions` : "Create Custom Role"} size="xl">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {!editingRole && (
+    <form id={FORM_ID} onSubmit={handleSubmit} noValidate className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-[1fr_240px] sm:items-end">
+        {editingRole ? (
+          <p className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-900">{selected.size}</span> permissions selected
+          </p>
+        ) : (
           <Input
-            id="name"
-            label="Role Name"
+            id="roleName"
+            label="Role name"
             required
             placeholder="e.g. Branch Manager"
             value={name}
@@ -92,51 +99,81 @@ const RoleFormModal = ({ isOpen, onClose, editingRole }) => {
             error={error}
           />
         )}
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter permissions…"
+            aria-label="Filter permissions"
+            className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15"
+          />
+        </div>
+      </div>
 
-        <div className="max-h-96 overflow-y-auto rounded-lg border border-slate-200">
-          {Object.entries(groupedPermissions).map(([module, modulePermissions]) => {
-            const ids = modulePermissions.map((p) => p._id);
-            const allSelected = ids.every((id) => selectedPermissions.includes(id));
-
-            return (
-              <div key={module} className="border-b border-slate-100 last:border-0">
-                <div className="flex items-center justify-between bg-slate-50 px-4 py-2">
-                  <span className="text-sm font-bold capitalize text-slate-800">{module}</span>
-                  <button
-                    type="button"
-                    onClick={() => toggleModule(modulePermissions)}
-                    className="text-xs font-medium text-indigo-600 hover:underline"
-                  >
-                    {allSelected ? "Deselect all" : "Select all"}
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-3">
-                  {modulePermissions.map((p) => (
-                    <label key={p._id} className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedPermissions.includes(p._id)}
-                        onChange={() => togglePermission(p._id)}
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-                      />
-                      {p.action}
-                    </label>
-                  ))}
-                </div>
+      <div className="scrollbar-thin max-h-[52vh] space-y-3 overflow-y-auto pr-1">
+        {groups.map(([module, perms]) => {
+          const onCount = perms.filter((p) => selected.has(p._id)).length;
+          const allOn = onCount === perms.length;
+          return (
+            <section key={module} className="rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between rounded-t-xl bg-slate-50 px-4 py-2.5">
+                <span className="text-sm font-semibold text-slate-800">
+                  {humanize(module)}
+                  <span className="ml-2 text-xs font-normal text-slate-500">
+                    {onCount}/{perms.length}
+                  </span>
+                </span>
+                <button type="button" onClick={() => toggleModule(perms)} className="text-xs font-medium text-indigo-600 hover:text-indigo-700">
+                  {allOn ? "Clear" : "Select all"}
+                </button>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex flex-wrap gap-2 p-3">
+                {perms.map((p) => {
+                  const isOn = selected.has(p._id);
+                  return (
+                    <button
+                      key={p._id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isOn}
+                      title={p.description}
+                      onClick={() => toggle(p._id)}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium ring-1 ring-inset transition ${
+                        isOn ? "bg-indigo-600 text-white ring-indigo-600" : "bg-white text-slate-600 ring-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {isOn && <Check className="h-3.5 w-3.5" />}
+                      {humanize(p.action)}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        {groups.length === 0 && <p className="py-8 text-center text-sm text-slate-500">No permissions match “{filter}”.</p>}
+      </div>
+    </form>
+  );
+};
 
-        <div className="mt-1 flex justify-end gap-2.5 border-t border-slate-100 pt-4">
-          <Button type="button" variant="secondary" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button type="submit" isLoading={isCreating || isUpdating}>
-            {editingRole ? "Save Permissions" : "Create Role"}
-          </Button>
-        </div>
-      </form>
+const RoleFormModal = ({ isOpen, onClose, editingRole }) => {
+  const [isSubmitting, setSubmitting] = useState(false);
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingRole ? `Edit "${editingRole.name}"` : "Create custom role"}
+      description="Choose what people with this role can see and do"
+      size="2xl"
+      footer={
+        <FormModalFooter formId={FORM_ID} onCancel={onClose} isLoading={isSubmitting} submitLabel={editingRole ? "Save permissions" : "Create role"} showEnterHint={false} />
+      }
+    >
+      {isOpen && <RoleForm key={editingRole?._id || "new"} editingRole={editingRole} onDone={onClose} setSubmitting={setSubmitting} />}
     </Modal>
   );
 };

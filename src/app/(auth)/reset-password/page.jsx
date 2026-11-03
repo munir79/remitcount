@@ -3,7 +3,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useResetPasswordMutation } from "@/redux/features/auth/authApi";
-import Card from "@/compoent/ui/Card";
+
 import Input from "@/compoent/ui/Input";
 import Button from "@/compoent/ui/Button";
 
@@ -42,10 +42,10 @@ const ResetPasswordForm = () => {
   };
 
   return (
-    <Card>
+    <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-900">Reset Password</h1>
-        <p className="mt-1 text-sm text-neutral-500">Set a new password for {email}</p>
+        <h1 className="text-[28px] font-semibold tracking-tight text-slate-900">Reset Password</h1>
+        <p className="mt-2 text-[15px] text-slate-500">Set a new password for {email}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -72,14 +72,14 @@ const ResetPasswordForm = () => {
           Reset Password
         </Button>
       </form>
-    </Card>
+    </div>
   );
 };
 
 // ✅ Fix — Default Export এ Suspense দিয়ে Wrap করা হচ্ছে
 const ResetPasswordPage = () => {
   return (
-    <Suspense fallback={<Card>Loading...</Card>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <ResetPasswordForm />
     </Suspense>
   );

@@ -10,7 +10,8 @@ export const ledgerApi = apiSlice.injectEndpoints({
       providesTags: ["Ledger"],
     }),
     getTrialBalance: builder.query({
-      query: () => ({ url: GET_TRIAL_BALANCE, method: "GET" }),
+      // ✅ Fix — আগে params পাঠানো হতো না, তাই Branch Filter কাজ করত না
+      query: (params) => ({ url: GET_TRIAL_BALANCE, method: "GET", params }),
       providesTags: ["Ledger"],
     }),
   }),

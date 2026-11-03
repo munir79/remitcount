@@ -1,14 +1,21 @@
 const VARIANTS = {
-  primary: "bg-indigo-50 text-indigo-800 ring-1 ring-inset ring-indigo-600/20",
-  success: "bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-600/20",
-  danger: "bg-rose-50 text-rose-800 ring-1 ring-inset ring-rose-600/20",
-  warning: "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20",
-  neutral: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-500/20",
+  primary: { box: "bg-indigo-50 text-indigo-700 ring-indigo-600/15", dot: "bg-indigo-500" },
+  success: { box: "bg-emerald-50 text-emerald-700 ring-emerald-600/15", dot: "bg-emerald-500" },
+  danger: { box: "bg-rose-50 text-rose-700 ring-rose-600/15", dot: "bg-rose-500" },
+  warning: { box: "bg-amber-50 text-amber-700 ring-amber-600/20", dot: "bg-amber-500" },
+  info: { box: "bg-sky-50 text-sky-700 ring-sky-600/15", dot: "bg-sky-500" },
+  neutral: { box: "bg-slate-100 text-slate-600 ring-slate-500/15", dot: "bg-slate-400" },
 };
 
-const Badge = ({ children, variant = "neutral", className = "" }) => {
+/** Status দেখানোর জন্য — dot={false} দিলে বাম পাশের ছোট বিন্দু থাকবে না */
+const Badge = ({ children, variant = "neutral", dot = true, className = "" }) => {
+  const style = VARIANTS[variant] || VARIANTS.neutral;
+
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${VARIANTS[variant]} ${className}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${style.box} ${className}`}
+    >
+      {dot && <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />}
       {children}
     </span>
   );

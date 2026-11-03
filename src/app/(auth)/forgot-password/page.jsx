@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useForgotPasswordMutation, useVerifyOtpMutation } from "@/redux/features/auth/authApi";
-import Card from "@/compoent/ui/Card";
+
 import Input from "@/compoent/ui/Input";
 import Button from "@/compoent/ui/Button";
 
@@ -53,17 +53,17 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <Card>
+    <div>
       <Link href="/login" className="mb-4 flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700">
         <ArrowLeft className="h-4 w-4" />
         Back to login
       </Link>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-900">
+        <h1 className="text-[28px] font-semibold tracking-tight text-slate-900">
           {step === "request" ? "Forgot Password" : "Verify OTP"}
         </h1>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mt-2 text-[15px] text-slate-500">
           {step === "request"
             ? "Enter your email to receive a reset code"
             : `We sent a 6-digit code to ${email}`}
@@ -114,7 +114,7 @@ const ForgotPasswordPage = () => {
           </button>
         </form>
       )}
-    </Card>
+    </div>
   );
 };
 

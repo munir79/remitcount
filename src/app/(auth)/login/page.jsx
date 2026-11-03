@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useLazyGetMyProfileQuery, useSignInMutation } from "@/redux/features/auth/authApi";
-import Card from "@/compoent/ui/Card";
+
 import Input from "@/compoent/ui/Input";
 import { getLandingPage } from "@/lib/getLandingPage";
 import { initSocket } from "@/socket/socket";
@@ -61,10 +61,10 @@ const LoginPage = () => {
   };
 
   return (
-    <Card>
-      <div className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold text-neutral-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-neutral-500">Sign in to your accounting workspace</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-[28px] font-semibold tracking-tight text-slate-900">Welcome back</h1>
+        <p className="mt-2 text-[15px] text-slate-500">Sign in to your accounting workspace</p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -97,7 +97,7 @@ const LoginPage = () => {
           }
         />
 
-        <Button type="submit" isLoading={isLoading} className="mt-2 w-full">
+        <Button type="submit" isLoading={isLoading} size="lg" fullWidth className="mt-2">
           Sign In
         </Button>
       </form>
@@ -114,7 +114,7 @@ const LoginPage = () => {
           Sign up
         </Link>
       </p>
-    </Card>
+    </div>
   );
 };
 
