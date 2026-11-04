@@ -39,6 +39,8 @@ const ENTITY_LABEL = {
   SellCurrency: "Sell Currency",
   OtherIncome: "Other Income",
   PosExpense: "Expense",
+  PaymentIn: "Payment In",
+  PaymentOut: "Payment Out",
 };
 
 const ApprovalsPage = () => {

@@ -25,9 +25,11 @@ const AccountCard = ({ ba }) => {
   const Icon = meta.icon;
   const isBankType = ba.accountType === "Bank";
   const balance = Number(ba.account?.currentBalance || 0);
+  // Blind Count — Cashier Drawer এর Balance / Ledger দেখেন না
+  const Card = ba.balanceHidden ? "div" : Link;
   return (
-    <Link
-      href={`/ledger?account=${ba.account?._id}`}
+    <Card
+      {...(ba.balanceHidden ? {} : { href: `/ledger?account=${ba.account?._id}` })}
       className="group flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition hover:border-indigo-200 hover:shadow-elevated"
     >
       <div className="flex items-start justify-between gap-3">
@@ -41,14 +43,16 @@ const AccountCard = ({ ba }) => {
         {[isBankType ? [ba.bankName, ba.bankAccountNumber].filter(Boolean).join(" · ") : ba.location, ba.branch?.name].filter(Boolean).join(" · ") || meta.fallback}
       </p>
       <div className="mt-4 flex items-end justify-between">
-        <p className={`text-xl font-semibold tabular-nums ${balance < 0 ? "text-rose-600" : "text-slate-900"}`}>{formatMoney(balance)}</p>
-        <span className="flex items-center gap-0.5 text-xs font-medium text-slate-400 group-hover:text-indigo-600">
-          Ledger
-          <ChevronRight className="h-3.5 w-3.5" />
-        </span>
+        <p className={`text-xl font-semibold tabular-nums ${balance < 0 ? "text-rose-600" : "text-slate-900"}`}>{ba.balanceHidden ? "—" : formatMoney(balance)}</p>
+        {!ba.balanceHidden && (
+          <span className="flex items-center gap-0.5 text-xs font-medium text-slate-400 group-hover:text-indigo-600">
+            Ledger
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        )}
       </div>
       {isBankType && ba.allowNegativeBalance && <p className="mt-2 text-xs text-slate-400">Overdraft allowed</p>}
-    </Link>
+    </Card>
   );
 };
 
@@ -62,6 +66,7 @@ const BankAccountPage = () => {
   const cashAccounts = bankAccounts.filter((ba) => ba.accountType === "Cash");
   const banks = bankAccounts.filter((ba) => ba.accountType === "Bank");
   const sum = (list) => list.reduce((s, ba) => s + Number(ba.account?.currentBalance || 0), 0);
+  const drawersHidden = cashAccounts.some((ba) => ba.balanceHidden);
 
   useSocketEvent("company-data-updated", (payload) => {
     if (["BankAccount", "Journal", "CashierSession", "CashTransfer"].includes(payload?.module)) refetch();
@@ -79,9 +84,9 @@ const BankAccountPage = () => {
       <PageHeader title="Cash & Bank" description="Cashier drawers and bank accounts with their current balances" actions={addButton} />
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Physical cash" value={formatMoney(sum(cashAccounts))} icon={Wallet} tone="amber" hint={`${cashAccounts.length} drawer(s)`} isLoading={isLoading} />
+        <StatCard label="Physical cash" value={drawersHidden ? "—" : formatMoney(sum(cashAccounts))} icon={Wallet} tone="amber" hint={`${cashAccounts.length} drawer(s)`} isLoading={isLoading} />
         <StatCard label="Cash at bank" value={formatMoney(sum(banks))} icon={Landmark} tone="sky" hint={`${banks.length} account(s)`} isLoading={isLoading} />
-        <StatCard label="Total cash & bank" value={formatMoney(sum(bankAccounts))} icon={Banknote} tone="indigo" isLoading={isLoading} />
+        <StatCard label="Total cash & bank" value={drawersHidden ? "—" : formatMoney(sum(bankAccounts))} icon={Banknote} tone="indigo" isLoading={isLoading} />
       </div>
 
       {isLoading ? (

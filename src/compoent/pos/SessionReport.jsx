@@ -49,6 +49,7 @@ const CurrencyCounts = ({ title, rows, showValue }) =>
  * ✅ Session এর হিসাব — Opening (গোনা) + ঢোকা − বের হওয়া = Expected; গোনা আর পার্থক্য
  * summary = Backend getSessionSummary: { session, lines, totalIn, totalOut, expected, approvalLimit }
  * counted দিলে (বন্ধের সময় Live) সেটাই দেখায়; না দিলে Session এ Save করা গোনা
+ * summary.blind — Cashier এর Session বন্ধ হয়নি: System এর সংখ্যা আসে না, শুধু কে / কখন
  */
 const SessionReport = ({ summary, counted }) => {
   const { hasPermission } = useAuth();
@@ -71,7 +72,7 @@ const SessionReport = ({ summary, counted }) => {
         <div>
           <p className="text-xs text-slate-500">Opened</p>
           <p className="font-medium text-slate-900">{formatDateTime(s.openedAt)}</p>
-          {s.openedBy && s.openedBy._id !== s.cashier?._id && <p className="text-xs text-slate-500">by {s.openedBy.name}</p>}
+          {s.assignedBy && <p className="text-xs text-slate-500">Assigned by {s.assignedBy.name}</p>}
         </div>
         <div>
           <p className="text-xs text-slate-500">Status</p>
@@ -80,12 +81,23 @@ const SessionReport = ({ summary, counted }) => {
         </div>
       </div>
 
+      {summary.blind ? (
+        <p className="rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-600">The figures appear here after the session is closed.</p>
+      ) : (
+      <>
       <div className="rounded-xl border border-slate-200 px-4 py-1 print:border-slate-400">
         <div className="divide-y divide-slate-100">
           <Row
             label="Opening (counted)"
             value={formatMoney(s.openingBalance)}
-            sub={s.openingVariance ? `system was ${formatMoney(s.openingSystemBalance)} (${s.openingVariance > 0 ? "+" : "−"}${formatMoney(Math.abs(s.openingVariance))})` : undefined}
+            sub={
+              [
+                s.openingVariance ? `system was ${formatMoney(s.openingSystemBalance)} (${s.openingVariance > 0 ? "+" : "−"}${formatMoney(Math.abs(s.openingVariance))})` : "",
+                s.openingGiven ? `includes ${formatMoney(s.openingGiven)} given` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ") || undefined
+            }
           />
           {summary.lines.length === 0 ? (
             <Row label="No cash transactions" value="—" tone="text-slate-400" />
@@ -130,6 +142,8 @@ const SessionReport = ({ summary, counted }) => {
           {s.approvedBy ? `Difference approved by ${s.approvedBy.name}${s.approvedAt ? ` on ${formatDateTime(s.approvedAt)}` : ""}` : "Manager note"}
           {s.reviewNote ? ` — "${s.reviewNote}"` : ""}
         </p>
+      )}
+      </>
       )}
     </div>
   );

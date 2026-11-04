@@ -1,10 +1,12 @@
 "use client";
+import { useState } from "react";
 import { ArrowDownCircle, Gift, Send } from "lucide-react";
 import { useGetAllBuyCurrencyQuery } from "@/redux/features/pos/buyCurrencyApi";
-import { useCreatePaymentOutMutation } from "@/redux/features/pos/paymentOutApi";
+import { useCreatePaymentOutMutation, useGetPaymentOutDuesQuery } from "@/redux/features/pos/paymentOutApi";
 import { useGetAllSendsQuery } from "@/redux/features/pos/sendApi";
 import { useGetAllOtherIncomesQuery } from "@/redux/features/pos/otherIncomeApi";
 import { formatMoney } from "@/lib/format";
+import PartyPaymentFormModal from "./PartyPaymentFormModal";
 import SettlementFormModal from "./SettlementFormModal";
 
 const ENTITY_TYPES = [
@@ -39,22 +41,53 @@ const usePaymentOutSources = (entityType, isOpen) => {
   return [];
 };
 
-const PaymentOutFormModal = ({ isOpen, onClose }) => (
-  <SettlementFormModal
-    isOpen={isOpen}
-    onClose={onClose}
-    formId="payment-out-form"
-    title="New Payment Out"
-    description="Pay a customer or supplier against a credit transaction"
-    entityTypes={ENTITY_TYPES}
-    useSources={usePaymentOutSources}
-    useCreateMutation={useCreatePaymentOutMutation}
-    accountField="paymentAccount"
-    accountLabel="Paid from"
-    partyLabel="Payee"
-    successMessage="Payment Out saved as Draft"
-    settleInFullFor="Send"
-  />
-);
+/** ✅ দুই পথ — নাম ধরে (Default, পুরনো দেনা আগে), আর একটা লেনদেনের বিপরীতে (Settle in full এখানে) */
+const PaymentOutFormModal = ({ isOpen, onClose }) => {
+  const [mode, setMode] = useState("name");
+  const handleClose = () => {
+    setMode("name");
+    onClose();
+  };
+
+  if (mode === "name") {
+    return (
+      <PartyPaymentFormModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        formId="payment-out-name-form"
+        title="New Payment Out"
+        description="Choose who you are paying — oldest dues are cleared first"
+        defaultPartyType="Vendor"
+        useDuesQuery={useGetPaymentOutDuesQuery}
+        useCreateMutation={useCreatePaymentOutMutation}
+        accountField="paymentAccount"
+        accountLabel="Paid from"
+        dueLabel="To pay"
+        approvePermission="paymentOut:approve"
+        receiptPath={(id) => `/pos/payment-out/${id}/receipt`}
+        onSwitchMode={() => setMode("single")}
+      />
+    );
+  }
+
+  return (
+    <SettlementFormModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      formId="payment-out-form"
+      title="New Payment Out"
+      description="Pay a customer or supplier against a credit transaction"
+      entityTypes={ENTITY_TYPES}
+      useSources={usePaymentOutSources}
+      useCreateMutation={useCreatePaymentOutMutation}
+      accountField="paymentAccount"
+      accountLabel="Paid from"
+      partyLabel="Payee"
+      successMessage="Payment Out saved as Draft"
+      settleInFullFor="Send"
+      onSwitchMode={() => setMode("name")}
+    />
+  );
+};
 
 export default PaymentOutFormModal;

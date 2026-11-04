@@ -26,7 +26,8 @@ const AccountHint = ({ acc, available, unit }) => {
     <span className="flex items-center gap-1.5">
       <Icon className="h-3.5 w-3.5" />
       {TYPE_META[acc.type]?.label}
-      {acc.openBy && ` · open by ${acc.openBy}`} · has {unit === "RM" ? formatMoney(available) : `${unit} ${formatNumber(available)}`}
+      {acc.openBy && ` · open by ${acc.openBy}`}
+      {available !== null && <> · has {unit === "RM" ? formatMoney(available) : `${unit} ${formatNumber(available)}`}</>}
     </span>
   );
 };
@@ -58,7 +59,8 @@ const CashTransferModal = ({ isOpen, onClose, defaultFrom = "", defaultTo = "" }
   const currencyDoc = currencies.find((c) => c._id === currency);
   const unit = currencyDoc?.code || "RM";
   const heldIn = (acc) => (acc?.holdings || []).find((h) => h.currency === currency)?.qty || 0;
-  const available = (acc) => (!acc ? 0 : isForeign ? heldIn(acc) : acc.balance);
+  // Blind Count — Cashier Drawer এর Balance জানেন না (null); Server যাচাই করে
+  const available = (acc) => (!acc ? 0 : acc.hideBalance ? null : isForeign ? heldIn(acc) : acc.balance);
 
   // কোন জায়গা থেকে / কোথায় দেওয়া যায়
   const fromList = isForeign ? accounts.filter((a) => a.type === "Cash" && a.isOpen && (a.mine || canManage)) : accounts.filter((a) => a.canMoveCash);
@@ -96,7 +98,7 @@ const CashTransferModal = ({ isOpen, onClose, defaultFrom = "", defaultTo = "" }
     if (!to) next.to = isForeign ? "Choose the drawer that receives the notes" : "Choose where the cash goes";
     if (from && to && from === to) next.to = "Choose a different place";
     if (!(amt > 0)) next.amount = "Enter the amount";
-    else if (fromAcc && amt > available(fromAcc)) next.amount = `Only ${isForeign ? `${unit} ${formatNumber(available(fromAcc))}` : formatMoney(available(fromAcc))} available`;
+    else if (fromAcc && available(fromAcc) !== null && amt > available(fromAcc)) next.amount = `Only ${isForeign ? `${unit} ${formatNumber(available(fromAcc))}` : formatMoney(available(fromAcc))} available`;
     if (Object.keys(next).length) {
       setErrors(next);
       return;
@@ -117,7 +119,7 @@ const CashTransferModal = ({ isOpen, onClose, defaultFrom = "", defaultTo = "" }
       .map((a) => ({
         value: a._id,
         label: a.name,
-        sub: [TYPE_META[a.type]?.label, a.mine ? "your drawer" : a.openBy && `open by ${a.openBy}`, a.branch?.name, isForeign ? `${unit} ${formatNumber(heldIn(a))}` : formatMoney(a.balance)]
+        sub: [TYPE_META[a.type]?.label, a.mine ? "your drawer" : a.openBy && `open by ${a.openBy}`, a.branch?.name, a.hideBalance ? "" : isForeign ? `${unit} ${formatNumber(heldIn(a))}` : formatMoney(a.balance)]
           .filter(Boolean)
           .join(" · "),
       }));

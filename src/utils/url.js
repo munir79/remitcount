@@ -1,9 +1,9 @@
 // export const baseUriBackend = "http://localhost:5000/";
 export const baseUriBackend = "https://posh-and-accounting-backend.onrender.com/";
-// export const socketUri = "https://final-account-posh.onrender.com";
+
+// export const socketUri = "http://localhost:5000/";
 export const socketUri = "https://posh-and-accounting-backend.onrender.com";
 // chekcge
-// export const baseUriBackend = 'https://your-production-domain.com/';
 
 // API Base
 export const API = baseUriBackend + "api/v1";
@@ -92,7 +92,10 @@ export const NEW_BANK_ACCOUNT_PREVIEW = `${API}/bank-account/new-account-preview
 export const GET_POS_DASHBOARD_SUMMARY = `${API}/report/dashboard-summary`;
 
 // ===== POS — Cashier Session =====
-export const OPEN_CASHIER_SESSION = `${API}/pos/cashier-session/open-session`;
+export const ASSIGN_DRAWER = `${API}/pos/cashier-session/assign-drawer`;
+export const CANCEL_DRAWER_ASSIGNMENT = (id) => `${API}/pos/cashier-session/cancel-assignment/${id}`;
+export const GET_MY_ASSIGNMENT = `${API}/pos/cashier-session/get-my-assignment`;
+export const START_CASHIER_SESSION = `${API}/pos/cashier-session/start-session`;
 export const CLOSE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/close-session/${id}`;
 export const GET_ALL_CASHIER_SESSIONS = `${API}/pos/cashier-session/get-all-sessions`;
 export const GET_MY_OPEN_SESSION = `${API}/pos/cashier-session/get-my-open-session`;
@@ -100,7 +103,7 @@ export const GET_SINGLE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/ge
 export const APPROVE_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/approve-session/${id}`;
 export const REJECT_CASHIER_SESSION = (id) => `${API}/pos/cashier-session/reject-session/${id}`;
 export const GET_SESSION_SUMMARY = (id) => `${API}/pos/cashier-session/get-session-summary/${id}`;
-export const GET_AVAILABLE_DRAWERS = `${API}/pos/cashier-session/get-available-drawers`;
+export const GET_DRAWER_BOARD = `${API}/pos/cashier-session/get-drawer-board`;
 export const GET_BRANCH_DAY_SUMMARY = `${API}/pos/cashier-session/get-branch-day-summary`;
 export const CREATE_CASH_TRANSFER = `${API}/pos/cash-transfer/create-cash-transfer`;
 export const CANCEL_CASH_TRANSFER = (id) => `${API}/pos/cash-transfer/cancel-cash-transfer/${id}`;
@@ -172,12 +175,18 @@ export const CREATE_PAYMENT_IN = `${API}/pos/payment-in/create-payment-in`;
 export const GET_ALL_PAYMENT_IN = `${API}/pos/payment-in/get-all-payment-in`;
 export const GET_SINGLE_PAYMENT_IN = (id) => `${API}/pos/payment-in/get-single-payment-in/${id}`;
 export const POST_PAYMENT_IN = (id) => `${API}/pos/payment-in/post-payment-in/${id}`;
+export const CANCEL_PAYMENT_IN = (id) => `${API}/pos/payment-in/cancel-payment-in/${id}`;
+export const GET_PAYMENT_IN_DUES = `${API}/pos/payment-in/open-dues`;
+export const GET_PAYMENT_IN_RECEIPT = (id) => `${API}/pos/payment-in/receipt/${id}`;
 
 // ===== POS — Payment Out =====
 export const CREATE_PAYMENT_OUT = `${API}/pos/payment-out/create-payment-out`;
 export const GET_ALL_PAYMENT_OUT = `${API}/pos/payment-out/get-all-payment-out`;
 export const GET_SINGLE_PAYMENT_OUT = (id) => `${API}/pos/payment-out/get-single-payment-out/${id}`;
 export const POST_PAYMENT_OUT = (id) => `${API}/pos/payment-out/post-payment-out/${id}`;
+export const CANCEL_PAYMENT_OUT = (id) => `${API}/pos/payment-out/cancel-payment-out/${id}`;
+export const GET_PAYMENT_OUT_DUES = `${API}/pos/payment-out/open-dues`;
+export const GET_PAYMENT_OUT_RECEIPT = (id) => `${API}/pos/payment-out/receipt/${id}`;
 
 //// ===== POS — Approval Workflow =====
 export const CREATE_APPROVAL_REQUEST = `${API}/pos/approval/create-request`;

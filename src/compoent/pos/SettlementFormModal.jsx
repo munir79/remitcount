@@ -37,6 +37,7 @@ const SettlementFormModal = ({
   partyLabel,
   successMessage,
   settleInFullFor,
+  onSwitchMode, // থাকলে "নাম ধরে" Form এ ফিরে যাওয়ার Link
 }) => {
   const { hasPermission } = useAuth();
   const [entityType, setEntityType] = useState(entityTypes[0].value);
@@ -226,6 +227,12 @@ const SettlementFormModal = ({
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
             Check the amount — it is {differencePercent.toFixed(1)}% {difference > 0 ? "more" : "less"} than the due.
           </p>
+        )}
+
+        {onSwitchMode && (
+          <button type="button" onClick={onSwitchMode} className="text-[13px] font-medium text-indigo-600 hover:text-indigo-800">
+            Pay by name instead
+          </button>
         )}
 
         {selected && (

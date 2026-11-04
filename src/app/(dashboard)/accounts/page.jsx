@@ -220,7 +220,7 @@ const AccountRows = ({ node, depth, collapsed, onToggle, forceOpen, canManage, o
         <DetailCell node={node} />
       </td>
       <td className={`${TD} text-right text-[15px]`}>
-        <Money value={node.currentBalance} />
+        {node.balanceHidden ? <span className="text-slate-300">—</span> : <Money value={node.currentBalance} />}
       </td>
       <td className={`${TD} w-28 print:hidden`}>
         <div className={ACTIONS_WRAP}>

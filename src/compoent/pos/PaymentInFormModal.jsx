@@ -1,10 +1,12 @@
 "use client";
+import { useState } from "react";
 import { ArrowUpCircle, Gift, Send } from "lucide-react";
 import { useGetAllOtherIncomesQuery } from "@/redux/features/pos/otherIncomeApi";
-import { useCreatePaymentInMutation } from "@/redux/features/pos/paymentInApi";
+import { useCreatePaymentInMutation, useGetPaymentInDuesQuery } from "@/redux/features/pos/paymentInApi";
 import { useGetAllSellCurrencyQuery } from "@/redux/features/pos/sellCurrencyApi";
 import { useGetAllSendsQuery } from "@/redux/features/pos/sendApi";
 import { formatMoney } from "@/lib/format";
+import PartyPaymentFormModal from "./PartyPaymentFormModal";
 import SettlementFormModal from "./SettlementFormModal";
 
 const ENTITY_TYPES = [
@@ -43,21 +45,52 @@ const usePaymentInSources = (entityType, isOpen) => {
   return [];
 };
 
-const PaymentInFormModal = ({ isOpen, onClose }) => (
-  <SettlementFormModal
-    isOpen={isOpen}
-    onClose={onClose}
-    formId="payment-in-form"
-    title="New Payment In"
-    description="Receive money from a customer against a credit transaction"
-    entityTypes={ENTITY_TYPES}
-    useSources={usePaymentInSources}
-    useCreateMutation={useCreatePaymentInMutation}
-    accountField="depositAccount"
-    accountLabel="Received into"
-    partyLabel="Customer"
-    successMessage="Payment In saved as Draft"
-  />
-);
+/** ✅ দুই পথ — নাম ধরে (Default, পুরনো বাকি আগে), আর একটা লেনদেনের বিপরীতে */
+const PaymentInFormModal = ({ isOpen, onClose }) => {
+  const [mode, setMode] = useState("name");
+  const handleClose = () => {
+    setMode("name");
+    onClose();
+  };
+
+  if (mode === "name") {
+    return (
+      <PartyPaymentFormModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        formId="payment-in-name-form"
+        title="New Payment In"
+        description="Choose who is paying — oldest dues are cleared first"
+        defaultPartyType="Customer"
+        useDuesQuery={useGetPaymentInDuesQuery}
+        useCreateMutation={useCreatePaymentInMutation}
+        accountField="depositAccount"
+        accountLabel="Received into"
+        dueLabel="To collect"
+        approvePermission="paymentIn:approve"
+        receiptPath={(id) => `/pos/payment-in/${id}/receipt`}
+        onSwitchMode={() => setMode("single")}
+      />
+    );
+  }
+
+  return (
+    <SettlementFormModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      formId="payment-in-form"
+      title="New Payment In"
+      description="Receive money from a customer against a credit transaction"
+      entityTypes={ENTITY_TYPES}
+      useSources={usePaymentInSources}
+      useCreateMutation={useCreatePaymentInMutation}
+      accountField="depositAccount"
+      accountLabel="Received into"
+      partyLabel="Customer"
+      successMessage="Payment In saved as Draft"
+      onSwitchMode={() => setMode("name")}
+    />
+  );
+};
 
 export default PaymentInFormModal;

@@ -66,6 +66,7 @@ const PosDashboardPage = () => {
   });
 
   const summary = data?.data;
+  const cashHidden = summary?.cashInHand === null; // Blind Count — Cashier নিজের Drawer এর হিসাব দেখেন না
   const profit = Number(summary?.profit || 0);
   const cashBreakdown = summary?.cashBreakdown || [];
   const visibleTiles = TILES.filter((tile) => !tile.permission || hasPermission(tile.permission));
@@ -103,10 +104,10 @@ const PosDashboardPage = () => {
         <StatCard label="To pay (Creditors)" value={formatMoney(summary?.creditors)} icon={Landmark} tone="amber" hint="We still have to pay" isLoading={isLoading} />
         <StatCard
           label="Cash in Hand"
-          value={formatMoney(summary?.cashInHand)}
+          value={cashHidden ? "—" : formatMoney(summary?.cashInHand)}
           icon={Coins}
           tone="indigo"
-          hint={summary?.scope === "own-session" ? "Your drawer" : "All cash drawers"}
+          hint={cashHidden ? "Counted when you close" : summary?.scope === "own-session" ? "Your drawer" : "All cash drawers"}
           isLoading={isLoading}
         />
       </section>
@@ -166,13 +167,15 @@ const PosDashboardPage = () => {
                     </div>
                     <span className="truncate text-sm text-slate-700">{row.accountName}</span>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">{formatMoney(row.balance)}</span>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">{row.balance === null ? "—" : formatMoney(row.balance)}</span>
                 </li>
               ))}
-              <li className="flex items-center justify-between bg-slate-50/70 px-5 py-3">
-                <span className="text-sm font-medium text-slate-600">Total</span>
-                <span className="text-sm font-semibold tabular-nums text-indigo-700">{formatMoney(summary?.cashInHand)}</span>
-              </li>
+              {!cashHidden && (
+                <li className="flex items-center justify-between bg-slate-50/70 px-5 py-3">
+                  <span className="text-sm font-medium text-slate-600">Total</span>
+                  <span className="text-sm font-semibold tabular-nums text-indigo-700">{formatMoney(summary?.cashInHand)}</span>
+                </li>
+              )}
             </ul>
           )}
 

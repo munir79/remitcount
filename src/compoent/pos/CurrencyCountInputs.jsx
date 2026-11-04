@@ -18,8 +18,9 @@ export const missingCurrencyCount = (holdings, counts) => holdings.find((h) => c
  * holdings: [{ currency, currencyCode, name, decimals, qty }] — System এ যা আছে (গোনা বাধ্যতামূলক)
  * counts: { [currencyId]: "গোনা" } ; অন্য Currency পাওয়া গেলে "Found another currency" দিয়ে যোগ করা যায়
  * গরমিল গড় খরচে RM এ হিসাব হয় (Server এ) — RM এর গরমিলের সাথে যোগ হয়ে অনুমোদনের সীমার সাথে মেলে
+ * blind — Cashier এর গোনা: System এর সংখ্যা ও গরমিল দেখায় না; allowExtra — অন্য Currency যোগ করা যায়
  */
-const CurrencyCountInputs = ({ holdings = [], counts, onChange, error }) => {
+const CurrencyCountInputs = ({ holdings = [], counts, onChange, error, blind = false, allowExtra = true }) => {
   const { data: boardData } = useGetRateBoardQuery();
   const [extra, setExtra] = useState([]); // System এ নেই কিন্তু পাওয়া গেছে
   const [adding, setAdding] = useState("");
@@ -31,7 +32,7 @@ const CurrencyCountInputs = ({ holdings = [], counts, onChange, error }) => {
     return { currency: id, currencyCode: c?.code || "?", name: c?.name || "", decimals: c?.decimals ?? 2, qty: 0 };
   });
   const rows = [...holdings, ...extraRows];
-  const addable = all.filter((c) => !heldIds.has(c._id) && !extra.includes(c._id));
+  const addable = allowExtra ? all.filter((c) => !heldIds.has(c._id) && !extra.includes(c._id)) : [];
   const set = (id, value) => onChange({ ...counts, [id]: value });
 
   if (rows.length === 0 && addable.length === 0) return null;
@@ -43,18 +44,18 @@ const CurrencyCountInputs = ({ holdings = [], counts, onChange, error }) => {
         {rows.length > 0 && <p className="text-xs text-slate-500">Count every note</p>}
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 py-3 text-[13px] text-slate-500">The system shows no foreign currency in this drawer.</p>
+        <p className="px-4 py-3 text-[13px] text-slate-500">{blind ? "Found foreign currency? Add it here." : "The system shows no foreign currency in this drawer."}</p>
       ) : (
         <div className="divide-y divide-slate-100">
           {rows.map((r) => {
             const value = counts[r.currency] ?? "";
-            const diff = value === "" ? null : Math.round((Number(value) - r.qty) * 10000) / 10000;
+            const diff = value === "" || blind ? null : Math.round((Number(value) - r.qty) * 10000) / 10000;
             const isExtra = !heldIds.has(r.currency);
             return (
               <div key={r.currency} className="grid grid-cols-[64px_1fr_120px] items-center gap-3 px-4 py-2.5 sm:grid-cols-[64px_1fr_140px_110px]">
                 <span className="flex h-8 items-center justify-center rounded-md bg-slate-100 font-mono text-xs font-bold text-slate-700">{r.currencyCode}</span>
                 <span className="min-w-0 text-xs text-slate-500">
-                  System {formatNumber(r.qty, r.decimals)}
+                  {blind ? r.name : `System ${formatNumber(r.qty, r.decimals)}`}
                   {isExtra && (
                     <button
                       type="button"
@@ -78,9 +79,11 @@ const CurrencyCountInputs = ({ holdings = [], counts, onChange, error }) => {
                   onChange={(e) => set(r.currency, e.target.value)}
                   className="h-9 w-full rounded-lg border border-slate-300 px-2.5 text-right text-sm tabular-nums focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/15"
                 />
-                <span className={`col-span-3 text-right text-xs font-semibold tabular-nums sm:col-span-1 ${diff === null ? "text-slate-300" : diff === 0 ? "text-emerald-700" : diff > 0 ? "text-amber-700" : "text-rose-600"}`}>
-                  {diff === null ? "—" : diff === 0 ? "Matches" : `${diff > 0 ? "+" : "−"} ${formatNumber(Math.abs(diff), r.decimals)} ${diff > 0 ? "over" : "short"}`}
-                </span>
+                {!blind && (
+                  <span className={`col-span-3 text-right text-xs font-semibold tabular-nums sm:col-span-1 ${diff === null ? "text-slate-300" : diff === 0 ? "text-emerald-700" : diff > 0 ? "text-amber-700" : "text-rose-600"}`}>
+                    {diff === null ? "—" : diff === 0 ? "Matches" : `${diff > 0 ? "+" : "−"} ${formatNumber(Math.abs(diff), r.decimals)} ${diff > 0 ? "over" : "short"}`}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -116,9 +119,11 @@ const CurrencyCountInputs = ({ holdings = [], counts, onChange, error }) => {
         </div>
       )}
       {error && <p className="px-4 pb-3 text-xs font-medium text-rose-600">{error}</p>}
-      <p className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-500">
-        Differences are valued at average cost and added to the RM difference — above the approval limit, a manager must approve.
-      </p>
+      {!blind && (
+        <p className="border-t border-slate-100 px-4 py-2 text-[11px] text-slate-500">
+          Differences are valued at average cost and added to the RM difference — above the approval limit, a manager must approve.
+        </p>
+      )}
     </div>
   );
 };

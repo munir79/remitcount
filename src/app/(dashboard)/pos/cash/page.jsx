@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeftRight, CalendarDays, Hourglass, Wallet, XCircle } from "lucide-react";
+import { ArrowLeftRight, CalendarDays, Hourglass, LayoutGrid, UserCheck, Wallet, XCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useGetAllCashierSessionsQuery, useGetBranchDaySummaryQuery } from "@/redux/features/pos/cashierSessionApi";
+import { useCancelDrawerAssignmentMutation, useGetAllCashierSessionsQuery, useGetBranchDaySummaryQuery, useGetDrawerBoardQuery } from "@/redux/features/pos/cashierSessionApi";
 import { useCancelCashTransferMutation, useGetAllCashTransfersQuery } from "@/redux/features/pos/cashTransferApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import { formatDateTime, formatMoney, formatNumber, todayInCompany } from "@/lib/format";
@@ -26,6 +26,7 @@ import ConfirmDialog from "@/compoent/ui/ConfirmDialog";
 import PrintHeader, { PrintButton } from "@/compoent/ui/PrintHeader";
 import { STATUS_VARIANT, TD } from "@/compoent/ui/TableCells";
 import CashTransferModal from "@/compoent/pos/CashTransferModal";
+import AssignDrawerModal from "@/compoent/pos/AssignDrawerModal";
 import { SESSION_STATUS } from "@/compoent/pos/SessionReport";
 
 // আজকের তারিখ — Malaysia র হিসাবে "YYYY-MM-DD"
@@ -44,6 +45,131 @@ const Money = ({ value, signed = false }) => {
 const SessionStatusBadge = ({ status }) => {
   const meta = SESSION_STATUS[status] || SESSION_STATUS.Open;
   return <Badge variant={meta.variant}>{meta.label}</Badge>;
+};
+
+// ============================================================
+// Drawers — এখন কে কোন Drawer এ, কত দিয়ে শুরু, এখন কত (Manager / Admin)
+// ============================================================
+const drawerStatus = (d) => {
+  if (d.session?.isStale) return { label: "Earlier day — close it", variant: "danger" };
+  if (d.session?.status === "PendingApproval") return { label: "Waiting for approval", variant: "warning" };
+  if (d.session) return { label: "Working", variant: "success" };
+  if (d.assignment?.locked) return { label: "Count failed", variant: "danger" };
+  if (d.assignment) return { label: `Waiting for ${d.assignment.cashier}`, variant: "warning" };
+  return { label: "Free", variant: "neutral" };
+};
+
+const DrawersTab = ({ showBranch, canAssign }) => {
+  const router = useRouter();
+  const [branch, setBranch] = useState("");
+  const [assigning, setAssigning] = useState(null); // null = বন্ধ; "" বা Drawer Id = খোলা
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const { data, isLoading, refetch } = useGetDrawerBoardQuery(branch ? { branch } : undefined);
+  const [cancelAssignment, { isLoading: isCancelling }] = useCancelDrawerAssignmentMutation();
+  useSocketEvent("company-data-updated", (p) => {
+    if (["CashierSession", "CashTransfer", "Journal"].includes(p?.module)) refetch();
+  });
+  const board = data?.data;
+  const drawers = board?.drawers || [];
+
+  const handleCancel = async () => {
+    try {
+      await cancelAssignment(cancelTarget.assignment._id).unwrap();
+      toast.success("Assignment cancelled");
+      setCancelTarget(null);
+    } catch (err) {
+      toast.error(err?.data?.message || "Failed to cancel");
+    }
+  };
+
+  if (isLoading) return <PageLoader />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {showBranch ? <BranchSelector branch={branch} onBranchChange={setBranch} className="w-52" /> : <span />}
+        {canAssign && (
+          <Button onClick={() => setAssigning("")}>
+            <UserCheck className="h-4 w-4" />
+            Assign drawer
+          </Button>
+        )}
+      </div>
+
+      {drawers.length === 0 ? (
+        <EmptyState icon={Wallet} title="No cash drawers" description="Add cash drawers for this branch in Cash & Bank." />
+      ) : (
+        <Table
+          columns={[
+            { key: "drawer", label: "Drawer" },
+            { key: "staff", label: "Staff" },
+            { key: "start", label: "Started" },
+            { key: "open", label: "Start with", align: "right" },
+            { key: "now", label: "In drawer now", align: "right" },
+            { key: "status", label: "Status" },
+            { key: "actions", label: "" },
+          ]}
+        >
+          {drawers.map((d) => {
+            const status = drawerStatus(d);
+            const a = d.assignment;
+            const lastFail = a?.failedCounts?.[a.failedCounts.length - 1];
+            return (
+              <tr key={d._id} onClick={d.session ? () => router.push(`/pos/cash/session/${d.session._id}`) : undefined} className={d.session ? "cursor-pointer" : ""}>
+                <td className={TD}>
+                  <p className="font-medium text-slate-900">{d.name}</p>
+                  <p className="text-xs text-slate-500">{[d.branch?.name, d.location].filter(Boolean).join(" · ")}</p>
+                </td>
+                <td className={`${TD} text-slate-700`}>{d.session?.cashier || a?.cashier || <span className="text-slate-300">—</span>}</td>
+                <td className={`${TD} text-xs text-slate-600`}>{d.session ? formatDateTime(d.session.openedAt) : <span className="text-slate-300">—</span>}</td>
+                <td className={`${TD} text-right`}>
+                  <Money value={d.session ? d.session.openingBalance : a ? a.expected : null} />
+                </td>
+                <td className={`${TD} text-right`}>
+                  <Money value={d.systemBalance} />
+                  {d.holdings.length > 0 && (
+                    <p className="text-[11px] text-slate-500">{d.holdings.map((h) => `${h.currencyCode} ${formatNumber(h.qty, h.decimals)}`).join(" · ")}</p>
+                  )}
+                </td>
+                <td className={TD}>
+                  <Badge variant={status.variant}>{status.label}</Badge>
+                  {a?.expectedCurrencies?.length > 0 && <p className="mt-0.5 text-[11px] text-slate-500">Starts with {a.expectedCurrencies.map((c) => `${c.currencyCode} ${formatNumber(c.countedQty)}`).join(" · ")}</p>}
+                  {lastFail && (
+                    <p className="mt-0.5 text-[11px] text-rose-600">
+                      {a.failedCounts.length} wrong count{a.failedCounts.length > 1 ? "s" : ""} · last {formatMoney(lastFail.cash)}, expected {formatMoney(a.expected)}
+                    </p>
+                  )}
+                </td>
+                <td className={`${TD} text-right`}>
+                  {canAssign && !d.session && !a && (
+                    <Button variant="secondary" size="sm" onClick={() => setAssigning(d._id)}>
+                      Assign
+                    </Button>
+                  )}
+                  {canAssign && a && (
+                    <Button variant="secondary" size="sm" onClick={() => setCancelTarget(d)}>
+                      Cancel
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </Table>
+      )}
+
+      {assigning !== null && <AssignDrawerModal isOpen onClose={() => setAssigning(null)} board={board} defaultDrawer={assigning} />}
+      <ConfirmDialog
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancel}
+        isLoading={isCancelling}
+        confirmLabel="Cancel assignment"
+        title={`Cancel ${cancelTarget?.name || ""} for ${cancelTarget?.assignment?.cashier || ""}`}
+        description="No money has moved yet. You can assign the drawer again with a new count."
+      />
+    </div>
+  );
 };
 
 // ============================================================
@@ -316,7 +442,7 @@ const CashPage = () => {
   const { hasPermission, user } = useAuth();
   const isManager = hasPermission("cashierSession:manage");
   const tabs = [
-    ...(isManager ? [{ value: "summary", label: "Day summary", icon: CalendarDays }] : []),
+    ...(isManager ? [{ value: "drawers", label: "Drawers", icon: LayoutGrid }, { value: "summary", label: "Day summary", icon: CalendarDays }] : []),
     { value: "sessions", label: "Sessions", icon: Wallet },
     ...(hasPermission("cashTransfer:read") ? [{ value: "transfers", label: "Transfers", icon: ArrowLeftRight }] : []),
   ];
@@ -339,6 +465,7 @@ const CashPage = () => {
       />
       {tabs.length > 1 && <SegmentedControl value={tab} onChange={setTab} options={tabs} className="mb-6 max-w-lg print:hidden" />}
 
+      {tab === "drawers" && <DrawersTab showBranch={!user?.branch} canAssign={isManager} />}
       {tab === "summary" && <DaySummaryTab showBranch={!user?.branch} />}
       {tab === "sessions" && <SessionsTab isManager={isManager} />}
       {tab === "transfers" && <TransfersTab canManage={hasPermission("cashTransfer:manage")} />}

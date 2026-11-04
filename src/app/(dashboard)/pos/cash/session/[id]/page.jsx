@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, FileText, RotateCcw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, RotateCcw, StopCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useApproveCashierSessionMutation, useGetSessionSummaryQuery, useRejectCashierSessionMutation } from "@/redux/features/pos/cashierSessionApi";
 import { useSocketEvent } from "@/socket/useSocketEvent";
@@ -14,6 +14,7 @@ import Button from "@/compoent/ui/Button";
 import Input from "@/compoent/ui/Input";
 import PrintHeader, { PrintButton } from "@/compoent/ui/PrintHeader";
 import SessionReport from "@/compoent/pos/SessionReport";
+import CloseSessionModal from "@/compoent/pos/CloseSessionModal";
 
 /**
  * ✅ একটা Session এর Report — Print করা যায়
@@ -26,6 +27,7 @@ const SessionReportPage = () => {
   const [approve, { isLoading: isApproving }] = useApproveCashierSessionMutation();
   const [reject, { isLoading: isRejecting }] = useRejectCashierSessionMutation();
   const [note, setNote] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
 
   useSocketEvent("company-data-updated", (payload) => {
     if (["CashierSession", "CashTransfer"].includes(payload?.module)) refetch();
@@ -42,7 +44,8 @@ const SessionReportPage = () => {
   }
 
   const s = summary.session;
-  const canReview = s.status === "PendingApproval" && hasPermission("cashierSession:manage");
+  const canManage = hasPermission("cashierSession:manage");
+  const canReview = s.status === "PendingApproval" && canManage;
 
   const act = async (fn, message) => {
     try {
@@ -61,8 +64,17 @@ const SessionReportPage = () => {
           <ArrowLeft className="h-4 w-4" />
           Cash & sessions
         </Link>
-        <PrintButton />
+        <div className="flex items-center gap-2">
+          {s.status === "Open" && canManage && (
+            <Button variant="secondary" onClick={() => setIsClosing(true)}>
+              <StopCircle className="h-4 w-4 text-rose-500" />
+              Count and close
+            </Button>
+          )}
+          <PrintButton />
+        </div>
       </div>
+      <CloseSessionModal isOpen={isClosing} onClose={() => setIsClosing(false)} session={s} />
 
       <PrintHeader title="Cashier session report" subtitle={`${s.cashAccount?.name || ""} · ${s.cashier?.name || ""}`} />
       <h1 className="mb-4 text-lg font-semibold text-slate-900 print:hidden">Cashier session report</h1>
