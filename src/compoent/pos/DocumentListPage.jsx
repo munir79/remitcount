@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useListFilters } from "@/hooks/useListFilters";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import PageHeader from "../ui/PageHeader";
+import ExcelDownloadButton from "../ui/ExcelDownloadButton";
 import ListToolbar, {
   DOCUMENT_STATUS_OPTIONS,
   StatusTabs,
@@ -62,6 +63,7 @@ const DocumentListPage = ({
   renderSummary, // (summary) => Filter এর পুরো ফলাফলের মোট (API র data.summary)
   FormModal,
   postDescription = "This will update account balances.",
+  exportType, // থাকলে "Excel" Button — যা Filter করা আছে সেটাই নামে
 }) => {
   const { hasPermission } = useAuth();
   const canFilterByBranch = hasPermission("cashierSession:manage");
@@ -128,7 +130,18 @@ const DocumentListPage = ({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <PageHeader title={title} description={description} actions={newButton} />
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          (exportType || newButton) && (
+            <>
+              {exportType && <ExcelDownloadButton type={exportType} params={filters.params} />}
+              {newButton}
+            </>
+          )
+        }
+      />
 
       {manualApply ? (
         <>

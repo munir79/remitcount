@@ -134,6 +134,7 @@ const SendListPage = () => {
   return (
     <>
       <DocumentListPage
+        exportType="send"
         title="Send"
         description="Remittance transfers — click a row to see how the customer paid, what is left to collect and to pay"
         newLabel="New Send"

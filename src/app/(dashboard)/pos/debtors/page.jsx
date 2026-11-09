@@ -2,7 +2,6 @@
 import { HandCoins } from "lucide-react";
 import { formatMoney } from "@/lib/format";
 import { useGetDebtorsReportQuery } from "@/redux/features/report/reportApi";
-import { EXPORT_DEBTORS_CSV } from "@/utils/url";
 import PartyBalancePage from "@/compoent/pos/PartyBalancePage";
 
 const DebtorsPage = () => (
@@ -17,8 +16,7 @@ const DebtorsPage = () => (
     emptyTitle="No debtors"
     emptyDescription="Nothing to collect — everyone has paid in full."
     useReportQuery={useGetDebtorsReportQuery}
-    exportUrl={EXPORT_DEBTORS_CSV}
-    exportFileName="debtors-report.csv"
+    exportType="debtors"
     buildReminder={(c) =>
       `Hi ${c.name}, this is a friendly reminder that you have an outstanding balance of ${formatMoney(c.amount)} with us. Please arrange payment at your earliest convenience. Thank you!`
     }

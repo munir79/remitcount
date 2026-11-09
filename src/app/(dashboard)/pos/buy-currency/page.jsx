@@ -77,6 +77,7 @@ const BuyCurrencyListPage = () => {
 
   return (
     <DocumentListPage
+      exportType="buy"
       title="Buy Currency"
       description="Foreign currency bought from customers — the notes go into the cashier's drawer"
       newLabel="New Buy"

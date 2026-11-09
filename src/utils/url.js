@@ -1,7 +1,7 @@
 // export const baseUriBackend = "http://localhost:5000/";
 export const baseUriBackend = "https://posh-and-accounting-backend.onrender.com/";
 
-// export const socketUri = "http://localhost:5000/";
+// export const socketUri = "http://localhost:5000";
 export const socketUri = "https://posh-and-accounting-backend.onrender.com";
 // chekcge
 
@@ -223,9 +223,8 @@ export const GET_PROFIT_LOSS = `${API}/report/profit-loss`;
 export const GET_BALANCE_SHEET = `${API}/report/balance-sheet`;
 export const GET_CASH_FLOW = `${API}/report/cash-flow`;
 export const GET_DEBTORS_REPORT = `${API}/report/debtors`;
-export const EXPORT_DEBTORS_CSV = `${API}/report/debtors/export-csv`;
+export const EXPORT_LIST = (type) => `${API}/export/${type}`; // Excel — তালিকার একই Filter
 export const GET_CREDITORS_REPORT = `${API}/report/creditors`;
-export const EXPORT_CREDITORS_CSV = `${API}/report/creditors/export-csv`;
 export const GET_PARTY_STATEMENT = `${API}/report/party-statement`;
 
 // ===== Currency & Exchange Rate =====

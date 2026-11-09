@@ -97,6 +97,7 @@ const OtherIncomeListPage = () => {
         </div>
       )}
       <DocumentListPage
+        exportType="other-income"
         title="Other Income"
         description="Air tickets, visa, bill payments and other services — with cost and profit"
         newLabel="New Income"

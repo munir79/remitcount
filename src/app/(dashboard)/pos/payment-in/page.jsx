@@ -21,6 +21,7 @@ const PaymentInListPage = () => {
   const { hasPermission } = useAuth();
   return (
     <DocumentListPage
+      exportType="payment-in"
       title="Payment In"
       description="Money received from customers against what they owe"
       newLabel="New Payment In"

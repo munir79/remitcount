@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import { useListFilters } from "@/hooks/useListFilters";
 import { useSocketEvent } from "@/socket/useSocketEvent";
 import { formatMoney } from "@/lib/format";
 import PageHeader from "../ui/PageHeader";
+import ExcelDownloadButton from "../ui/ExcelDownloadButton";
 import ListToolbar from "../ui/ListToolbar";
 import PageLoader from "../ui/PageLoader";
 import EmptyState from "../ui/EmptyState";
@@ -45,20 +46,19 @@ const PartyBalancePage = ({
   emptyTitle,
   emptyDescription,
   useReportQuery,
-  exportUrl,
-  exportFileName,
+  exportType, // "debtors" | "creditors" — Excel এ নামে
   buildReminder, // (party) => WhatsApp message
 }) => {
   const filters = useListFilters();
-  const [isExporting, setIsExporting] = useState(false);
   const [statementParty, setStatementParty] = useState(null);
 
-  const { data, isLoading, isFetching, refetch } = useReportQuery({
+  const queryParams = {
     page: filters.params.page,
     limit: filters.params.limit,
     search: filters.params.search,
     ...(filters.status ? { type: filters.status } : {}),
-  });
+  };
+  const { data, isLoading, isFetching, refetch } = useReportQuery(queryParams);
 
   useSocketEvent("company-data-updated", (payload) => {
     if (BALANCE_MODULES.includes(payload?.module)) refetch();
@@ -67,25 +67,6 @@ const PartyBalancePage = ({
   const parties = data?.data?.data || [];
   const pagination = data?.data?.pagination;
   const total = data?.data?.[totalField] || 0;
-
-  const handleExportCsv = async () => {
-    setIsExporting(true);
-    try {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(exportUrl, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error("Export failed");
-      const url = window.URL.createObjectURL(await res.blob());
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = exportFileName;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Could not export the report. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const columns = [
     { key: "name", label: "Name" },
@@ -100,10 +81,7 @@ const PartyBalancePage = ({
         title={title}
         description={description}
         actions={
-          <Button variant="secondary" onClick={handleExportCsv} isLoading={isExporting}>
-            {!isExporting && <Download className="h-4 w-4" />}
-            Export CSV
-          </Button>
+          <ExcelDownloadButton type={exportType} params={queryParams} />
         }
       />
 

@@ -90,6 +90,7 @@ const ExpenseListPage = () => {
         )}
       </div>
       <DocumentListPage
+        exportType="expense"
         title="Expenses"
         description="Admin and direct expenses — paid by cash or bank"
         newLabel="New Expense"
