@@ -4,7 +4,7 @@ import io from "socket.io-client";
 let socket = null;
 
 /**
- * Socket Initialize করা
+ 
  * JWT token পাঠাচ্ছি auth-এর জন্য
  */
 export const initSocket = (token) => {
